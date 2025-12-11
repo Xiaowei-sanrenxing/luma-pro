@@ -84,7 +84,9 @@ interface AppState {
   setApiEndpoint: (url: string) => void;
   customApiKey: string | null;
   setCustomApiKey: (key: string) => void;
-  
+  customModel: string | null;  // 自定义模型名称
+  setCustomModel: (model: string) => void;
+
   // Design Agent State
   isAgentOpen: boolean;
   toggleAgent: () => void;
@@ -490,7 +492,9 @@ export const useAppStore = create<AppState>()(
   setApiEndpoint: (url) => set({ apiEndpoint: url }),
   customApiKey: null,
   setCustomApiKey: (key) => set({ customApiKey: key }),
-  
+  customModel: null,
+  setCustomModel: (model) => set({ customModel: model }),
+
   isAgentOpen: false,
   toggleAgent: () => set((state) => ({ isAgentOpen: !state.isAgentOpen })),
 
@@ -515,6 +519,7 @@ export const useAppStore = create<AppState>()(
         globalApiKey: state.globalApiKey,
         apiEndpoint: state.apiEndpoint,
         customApiKey: state.customApiKey,
+        customModel: state.customModel,
         theme: state.theme,
       }),
     }

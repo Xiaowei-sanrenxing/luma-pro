@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store';
 import {
   Eye, EyeOff, Check, AlertCircle, Loader2,
-  Globe, Key, Server, Trash2, RefreshCw, Info
+  Globe, Key, Server, Trash2, RefreshCw, Info, Cpu
 } from 'lucide-react';
 
 export const SettingsPanel: React.FC = () => {
   const {
     apiEndpoint, setApiEndpoint,
     globalApiKey, setGlobalApiKey,
-    customApiKey, setCustomApiKey
+    customApiKey, setCustomApiKey,
+    customModel, setCustomModel
   } = useAppStore();
 
   // Gemini API 状态
@@ -22,6 +23,7 @@ export const SettingsPanel: React.FC = () => {
   const [showCustomKey, setShowCustomKey] = useState(false);
   const [localCustomEndpoint, setLocalCustomEndpoint] = useState(apiEndpoint || '');
   const [localCustomKey, setLocalCustomKey] = useState(customApiKey || '');
+  const [localCustomModel, setLocalCustomModel] = useState(customModel || '');
   const [isTestingCustom, setIsTestingCustom] = useState(false);
   const [customTestResult, setCustomTestResult] = useState<'success' | 'error' | null>(null);
 
@@ -32,23 +34,26 @@ export const SettingsPanel: React.FC = () => {
     setLocalGeminiKey(globalApiKey || '');
     setLocalCustomEndpoint(apiEndpoint || '');
     setLocalCustomKey(customApiKey || '');
-  }, [globalApiKey, apiEndpoint, customApiKey]);
+    setLocalCustomModel(customModel || '');
+  }, [globalApiKey, apiEndpoint, customApiKey, customModel]);
 
   // 检测变更
   useEffect(() => {
     const geminiKeyChanged = localGeminiKey !== (globalApiKey || '');
     const endpointChanged = localCustomEndpoint !== (apiEndpoint || '');
     const customKeyChanged = localCustomKey !== (customApiKey || '');
-    setHasChanges(geminiKeyChanged || endpointChanged || customKeyChanged);
+    const modelChanged = localCustomModel !== (customModel || '');
+    setHasChanges(geminiKeyChanged || endpointChanged || customKeyChanged || modelChanged);
     setGeminiTestResult(null);
     setCustomTestResult(null);
-  }, [localGeminiKey, localCustomEndpoint, localCustomKey, globalApiKey, apiEndpoint, customApiKey]);
+  }, [localGeminiKey, localCustomEndpoint, localCustomKey, localCustomModel, globalApiKey, apiEndpoint, customApiKey, customModel]);
 
   // 保存配置
   const handleSave = () => {
     setGlobalApiKey(localGeminiKey);
     setApiEndpoint(localCustomEndpoint);
     setCustomApiKey(localCustomKey);
+    setCustomModel(localCustomModel);
     setHasChanges(false);
   };
 
@@ -105,6 +110,7 @@ export const SettingsPanel: React.FC = () => {
     setLocalGeminiKey('');
     setLocalCustomEndpoint('');
     setLocalCustomKey('');
+    setLocalCustomModel('');
   };
 
   return (
@@ -260,6 +266,31 @@ export const SettingsPanel: React.FC = () => {
           </div>
         </div>
 
+        {/* 自定义模型输入框 */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-studio-600 dark:text-studio-300">
+            图片生成模型 <span className="font-normal text-studio-400">(可选)</span>
+          </label>
+          <div className="relative">
+            <Cpu size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-studio-400" />
+            <input
+              type="text"
+              value={localCustomModel}
+              onChange={(e) => setLocalCustomModel(e.target.value)}
+              placeholder="留空则自动检测，如：gemini-2.0-flash-exp"
+              className="w-full p-3 pl-9 rounded-lg border border-studio-200 dark:border-studio-600 bg-white dark:bg-studio-800 text-sm text-studio-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all font-mono"
+            />
+          </div>
+          <p className="text-[11px] text-studio-500 dark:text-studio-400 flex items-start gap-1">
+            <Info size={10} className="mt-0.5 shrink-0" />
+            <span>
+              常用模型：<br />
+              • OpenRouter: <code className="bg-studio-100 dark:bg-studio-700 px-1 rounded">google/gemini-3-pro-image-preview</code><br />
+              • Sonetto: <code className="bg-studio-100 dark:bg-studio-700 px-1 rounded">gemini-2.0-flash-exp</code>
+            </span>
+          </p>
+        </div>
+
         {/* 通用 API 连接状态 */}
         <div className="flex items-center gap-2 p-3 rounded-lg border border-studio-200 dark:border-studio-600 bg-white dark:bg-studio-800">
           <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
@@ -314,6 +345,7 @@ export const SettingsPanel: React.FC = () => {
         <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90">
           <li><b>Gemini API</b>：使用 Google 官方 Gemini 服务</li>
           <li><b>通用 API</b>：支持 OpenAI 兼容格式的第三方服务</li>
+          <li><b>自定义模型</b>：如果默认模型不可用，可手动指定</li>
           <li>所有配置安全存储在浏览器本地，不会上传服务器</li>
         </ul>
       </div>
