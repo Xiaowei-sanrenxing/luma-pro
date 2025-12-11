@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CanvasLayer, WorkflowType, GuideLine, Page, CanvasSize, AspectRatio, AIActionType, User } from './types';
+import { CanvasLayer, WorkflowType, GuideLine, Page, CanvasSize, AspectRatio, AIActionType, User, UserLicense } from './types';
 import { generateId } from './utils/helpers';
 
 interface HistoryState {
@@ -103,8 +103,19 @@ interface AppState {
   // Auth State
   user: User | null;
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
   login: (user: User) => void;
   logout: () => void;
+  setUser: (user: User | null) => void;
+  setIsAuthLoading: (loading: boolean) => void;
+
+  // License State
+  userLicense: UserLicense | null;
+  isLicenseLoading: boolean;
+  showLicenseModal: boolean;
+  setUserLicense: (license: UserLicense | null) => void;
+  setIsLicenseLoading: (loading: boolean) => void;
+  setShowLicenseModal: (show: boolean) => void;
 }
 
 const DEFAULT_CANVAS: CanvasSize = { width: 1080, height: 1440, label: '3:4 (Portrait)', ratio: '3:4' };
@@ -509,8 +520,19 @@ export const useAppStore = create<AppState>()(
   // Auth
   user: null,
   isAuthenticated: false,
+  isAuthLoading: true,
   login: (user) => set({ user, isAuthenticated: true }),
-  logout: () => set({ user: null, isAuthenticated: false, activeWorkflow: 'home' }),
+  logout: () => set({ user: null, isAuthenticated: false, userLicense: null, activeWorkflow: 'home' }),
+  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setIsAuthLoading: (loading) => set({ isAuthLoading: loading }),
+
+  // License
+  userLicense: null,
+  isLicenseLoading: false,
+  showLicenseModal: false,
+  setUserLicense: (license) => set({ userLicense: license }),
+  setIsLicenseLoading: (loading) => set({ isLicenseLoading: loading }),
+  setShowLicenseModal: (show) => set({ showLicenseModal: show }),
     }),
     {
       name: 'luma-pro-storage', // localStorage key

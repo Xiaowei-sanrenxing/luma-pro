@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Aperture, Mail, Lock, User, ArrowRight, Github, Chrome, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Aperture, Mail, Lock, User, ArrowRight, Github, Chrome, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
+import { authService } from '../services/authService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 export const AuthPage: React.FC = () => {
   const { login } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form State
   const [email, setEmail] = useState('');
@@ -17,23 +20,55 @@ export const AuthPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+
+    // 检查 Supabase 是否配置
+    if (!isSupabaseConfigured()) {
+      // 开发模式：模拟登录
+      setTimeout(() => {
         setIsLoading(false);
-        // Mock User Data
         login({
-            id: 'user-123',
-            name: isLogin ? 'Demo User' : name,
-            email: email,
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&q=80'
+          id: 'dev-user-' + Date.now(),
+          name: isLogin ? 'Dev User' : name,
+          email: email,
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&q=80'
         });
-    }, 1500);
+      }, 800);
+      return;
+    }
+
+    try {
+      let user;
+      if (isLogin) {
+        user = await authService.signIn(email, password);
+      } else {
+        user = await authService.signUp(email, password, name);
+      }
+      login(user);
+    } catch (err: any) {
+      setError(err.message || '操作失败，请稍后重试');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOAuthLogin = async (provider: 'google' | 'github') => {
+    if (!isSupabaseConfigured()) {
+      setError('OAuth 登录需要配置 Supabase');
+      return;
+    }
+
+    setError(null);
+    try {
+      await authService.signInWithOAuth(provider);
+    } catch (err: any) {
+      setError(err.message || 'OAuth 登录失败');
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex bg-white dark:bg-studio-950 transition-colors duration-500">
-      
+
       {/* Left: Brand Visual Area */}
       <div className="hidden lg:flex w-[55%] relative overflow-hidden bg-studio-900 items-center justify-center p-12">
           {/* Animated Background */}
@@ -56,7 +91,7 @@ export const AuthPage: React.FC = () => {
                   LUMA 是专为现代电商打造的 AI 视觉生产力工具。
                   一键生成模特、场景与营销素材，释放品牌潜能。
               </p>
-              
+
               {/* Testimonial Card */}
               <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-2xl">
                   <p className="text-sm font-medium italic text-white/90 mb-4">"LUMA 彻底改变了我们的上新流程，图片制作效率提升了 10 倍以上。"</p>
@@ -92,14 +127,29 @@ export const AuthPage: React.FC = () => {
 
               {/* Social Login */}
               <div className="grid grid-cols-2 gap-4">
-                  <SocialButton icon={Chrome} label="Google" />
-                  <SocialButton icon={Github} label="GitHub" />
+                  <SocialButton icon={Chrome} label="Google" onClick={() => handleOAuthLogin('google')} />
+                  <SocialButton icon={Github} label="GitHub" onClick={() => handleOAuthLogin('github')} />
               </div>
 
               <div className="relative">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-studio-200"></div></div>
                   <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-studio-400">或者使用邮箱</span></div>
               </div>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm"
+                  >
+                    <AlertCircle size={16} className="flex-shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -110,18 +160,18 @@ export const AuthPage: React.FC = () => {
                           </motion.div>
                       )}
                   </AnimatePresence>
-                  
+
                   <InputGroup icon={Mail} type="email" placeholder="电子邮箱" value={email} onChange={setEmail} />
-                  
+
                   <div className="relative">
-                      <InputGroup 
-                        icon={Lock} 
-                        type={showPassword ? "text" : "password"} 
-                        placeholder="密码" 
-                        value={password} 
-                        onChange={setPassword} 
+                      <InputGroup
+                        icon={Lock}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="密码"
+                        value={password}
+                        onChange={setPassword}
                       />
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-3.5 text-studio-400 hover:text-studio-600 transition-colors"
@@ -140,7 +190,7 @@ export const AuthPage: React.FC = () => {
                       </div>
                   )}
 
-                  <button 
+                  <button
                     disabled={isLoading}
                     className="w-full py-3 bg-studio-900 text-white rounded-xl font-bold text-sm shadow-xl shadow-studio-900/20 hover:bg-black hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
@@ -152,12 +202,12 @@ export const AuthPage: React.FC = () => {
               {/* Switcher */}
               <p className="text-center text-sm text-studio-500">
                   {isLogin ? "还没有账号? " : "已有账号? "}
-                  <button onClick={() => setIsLogin(!isLogin)} className="font-bold text-studio-900 hover:underline transition-all">
+                  <button onClick={() => { setIsLogin(!isLogin); setError(null); }} className="font-bold text-studio-900 hover:underline transition-all">
                       {isLogin ? "立即注册" : "直接登录"}
                   </button>
               </p>
           </div>
-          
+
           <div className="absolute bottom-6 text-[10px] text-studio-400 flex gap-4">
               <a href="#" className="hover:text-studio-900">隐私政策</a>
               <a href="#" className="hover:text-studio-900">服务条款</a>
@@ -167,8 +217,12 @@ export const AuthPage: React.FC = () => {
   );
 };
 
-const SocialButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
-    <button className="flex items-center justify-center gap-2 py-2.5 border border-studio-200 rounded-xl hover:bg-studio-50 hover:border-studio-300 transition-all group">
+const SocialButton = ({ icon: Icon, label, onClick }: { icon: any, label: string, onClick?: () => void }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center justify-center gap-2 py-2.5 border border-studio-200 rounded-xl hover:bg-studio-50 hover:border-studio-300 transition-all group"
+    >
         <Icon size={18} className="text-studio-600 group-hover:text-studio-900" />
         <span className="text-sm font-medium text-studio-600 group-hover:text-studio-900">{label}</span>
     </button>
@@ -179,8 +233,8 @@ const InputGroup = ({ icon: Icon, type, placeholder, value, onChange }: any) => 
         <div className="absolute left-3 top-3.5 text-studio-400 group-focus-within:text-studio-900 transition-colors">
             <Icon size={18} />
         </div>
-        <input 
-            type={type} 
+        <input
+            type={type}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}

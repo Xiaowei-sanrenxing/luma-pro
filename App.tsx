@@ -7,13 +7,68 @@ import { DesignAgent } from './components/DesignAgent';
 import { HomePage } from './components/HomePage';
 import { AuthPage } from './components/AuthPage';
 import { TutorialsPage } from './components/TutorialsPage';
+import { LicenseModal } from './components/LicenseModal';
 import { useAppStore } from './store';
+import { authService } from './services/authService';
+import { isSupabaseConfigured } from './services/supabaseClient';
 import { KeyRound, ExternalLink, Loader2, Play } from 'lucide-react';
 
 function App() {
-  const { apiKeyMissing, setApiKeyMissing, activeWorkflow, theme, isAuthenticated, globalApiKey, setGlobalApiKey } = useAppStore();
+  const {
+    apiKeyMissing,
+    setApiKeyMissing,
+    activeWorkflow,
+    theme,
+    isAuthenticated,
+    isAuthLoading,
+    globalApiKey,
+    setGlobalApiKey,
+    setUser,
+    setIsAuthLoading,
+    logout
+  } = useAppStore();
+
   const [hasCheckedKey, setHasCheckedKey] = useState(false);
   const [manualKey, setManualKey] = useState('');
+
+  // 监听 Supabase Auth 状态变化
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      // 开发模式：跳过 Supabase 认证监听
+      setIsAuthLoading(false);
+      return;
+    }
+
+    // 检查初始会话
+    const initAuth = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setUser(user);
+        }
+      } catch (e) {
+        console.error('[Auth] Init error:', e);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // 监听认证状态变化（包括 OAuth 回调）
+    const { data: { subscription } } = authService.onAuthStateChange((user) => {
+      if (user) {
+        setUser(user);
+      } else {
+        logout();
+      }
+      setIsAuthLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [setUser, setIsAuthLoading, logout]);
 
   useEffect(() => {
     // 只有在登录后才检查 Key
@@ -82,6 +137,16 @@ function App() {
     }
   };
 
+  // 0. Auth Loading State
+  if (isAuthLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-white text-indigo-600 gap-2">
+        <Loader2 className="animate-spin" size={24} />
+        <span className="text-lg font-medium">加载中...</span>
+      </div>
+    );
+  }
+
   // 1. Auth Check (First Priority)
   if (!isAuthenticated) {
     return <AuthPage />;
@@ -91,7 +156,7 @@ function App() {
   if (!hasCheckedKey) {
      return (
         <div className="h-screen w-screen flex items-center justify-center bg-white text-indigo-600 gap-2">
-            <Loader2 className="animate-spin" /> 
+            <Loader2 className="animate-spin" />
             <span>Initializing Application...</span>
         </div>
      );
@@ -113,11 +178,11 @@ function App() {
             <br/>
             {isAiStudio ? "请选择一个已关联 Billing (计费) 的 Google Cloud 项目。" : "请输入您的 Gemini API Key 以继续。"}
           </p>
-          
+
           {!isAiStudio && (
               <div className="mb-4 text-left">
                   <label className="text-xs font-bold text-gray-500 mb-1 block">API Key</label>
-                  <input 
+                  <input
                     type="password"
                     value={manualKey}
                     onChange={(e) => setManualKey(e.target.value)}
@@ -127,17 +192,17 @@ function App() {
               </div>
           )}
 
-          <button 
+          <button
             onClick={handleSelectKey}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 mb-6 flex items-center justify-center gap-2"
           >
             {isAiStudio ? '选择 Key' : '开始使用'} <Play size={16} fill="currentColor"/>
           </button>
-          
+
           <div className="flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors">
-            <a 
-              href="https://aistudio.google.com/app/apikey" 
-              target="_blank" 
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1"
             >
@@ -151,15 +216,25 @@ function App() {
   }
 
   // --- ROUTING LOGIC ---
-  
+
   // If workflow is 'home', show the Landing Page
   if (activeWorkflow === 'home') {
-    return <HomePage />;
+    return (
+      <>
+        <HomePage />
+        <LicenseModal />
+      </>
+    );
   }
 
   // Tutorials Page
   if (activeWorkflow === 'tutorials') {
-    return <TutorialsPage />;
+    return (
+      <>
+        <TutorialsPage />
+        <LicenseModal />
+      </>
+    );
   }
 
   // Otherwise, show the Editor Interface
@@ -167,15 +242,18 @@ function App() {
     <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-studio-950 text-gray-900 dark:text-gray-100 font-sans relative transition-colors duration-300">
       {/* 区域一：侧边栏 */}
       <Sidebar />
-      
+
       {/* 区域二：操作面板 */}
       <OperationPanel />
-      
+
       {/* 区域三：智能画布 */}
       <CanvasArea />
-      
+
       {/* 区域四：AI 设计助理 (悬浮) */}
       <DesignAgent />
+
+      {/* 授权码弹窗 (全局) */}
+      <LicenseModal />
     </div>
   );
 }

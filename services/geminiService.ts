@@ -3,6 +3,8 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { GenerationConfig, AnalysisResult } from "../types";
 import { useAppStore } from "../store";
+import { licenseService } from "./licenseService";
+import { isSupabaseConfigured } from "./supabaseClient";
 import {
   analyzeImageWithOpenAI,
   enhancePromptWithOpenAI,
@@ -192,6 +194,43 @@ export const enhancePrompt = async (input: string): Promise<string> => {
 };
 
 /**
+ * 授权检查中间件
+ * 在调用 AI 生成功能前检查用户授权状态
+ */
+const checkLicenseBeforeGenerate = async (): Promise<void> => {
+  // 如果 Supabase 未配置，跳过授权检查（开发模式）
+  if (!isSupabaseConfigured()) {
+    console.log('[License] Supabase not configured, skipping license check');
+    return;
+  }
+
+  const { user, userLicense, setUserLicense, setShowLicenseModal } = useAppStore.getState();
+
+  if (!user) {
+    throw new Error('请先登录');
+  }
+
+  // 快速路径：本地缓存有效且未过期
+  if (userLicense?.hasValidLicense) {
+    if (userLicense.isPermanent || !userLicense.expiresAt) {
+      return; // 永久授权
+    }
+    if (new Date(userLicense.expiresAt) > new Date()) {
+      return; // 未过期
+    }
+  }
+
+  // 服务端验证
+  const license = await licenseService.checkLicense(user.id);
+  setUserLicense(license);
+
+  if (!license.hasValidLicense) {
+    setShowLicenseModal(true);
+    throw new Error('LICENSE_REQUIRED');
+  }
+};
+
+/**
  * 生成图片 (智能选择模型)
  * 优先使用 gemini-2.5-flash-image 以提高成功率
  * 仅在需要高分辨率(2K/4K)时尝试 gemini-3-pro-image-preview，并支持自动回退
@@ -199,6 +238,16 @@ export const enhancePrompt = async (input: string): Promise<string> => {
  * 路由逻辑：如果配置了通用 API，使用 OpenAI 兼容服务；否则使用 Gemini
  */
 export const generateImage = async (generationConfig: GenerationConfig): Promise<string> => {
+  // 授权检查
+  try {
+    await checkLicenseBeforeGenerate();
+  } catch (e: any) {
+    if (e.message === 'LICENSE_REQUIRED') {
+      throw new Error('请先激活授权码以使用 AI 功能');
+    }
+    throw e;
+  }
+
   // 每次请求前重新获取配置
   const config = getApiConfig();
 

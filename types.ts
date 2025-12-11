@@ -141,3 +141,13 @@ export interface User {
   email: string;
   avatar?: string;
 }
+
+// --- License Types ---
+export type LicenseType = 'trial' | 'annual' | 'permanent';
+
+export interface UserLicense {
+  hasValidLicense: boolean;
+  licenseType?: LicenseType;
+  expiresAt?: string | null;
+  isPermanent?: boolean;
+}
