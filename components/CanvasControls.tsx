@@ -1,12 +1,12 @@
 
 
 import React, { useState } from 'react';
-import { 
-  LayoutTemplate, Download, Minus, Plus, Maximize, 
-  Trash2, ChevronDown, Sparkles, Loader2 
+import {
+  LayoutTemplate, Download, Minus, Plus, Maximize,
+  Trash2, ChevronDown, Sparkles, Loader2
 } from 'lucide-react';
 import { useAppStore } from '../store';
-import { AspectRatio } from '../types';
+import { AspectRatio, WorkflowType } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SIZES: { label: string; ratio: AspectRatio; w: number; h: number }[] = [
@@ -14,8 +14,6 @@ const SIZES: { label: string; ratio: AspectRatio; w: number; h: number }[] = [
     { label: '9:16 (Story)', ratio: '9:16', w: 1080, h: 1920 },
     { label: '1:1 (Square)', ratio: '1:1', w: 1080, h: 1080 },
     { label: '16:9 (Video)', ratio: '16:9', w: 1920, h: 1080 },
-    { label: 'Amazon 横幅 (1464×600)', ratio: '16:9', w: 1464, h: 600 },
-    { label: 'Amazon 标准 (600×450)', ratio: '4:3', w: 600, h: 450 },
 ];
 
 export const HeaderControls: React.FC = () => {
@@ -93,7 +91,7 @@ export const HeaderControls: React.FC = () => {
 
                 <AnimatePresence>
                     {isOpen && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 8, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 8, scale: 0.95 }}

@@ -59,6 +59,12 @@ const PLATFORMS = [
   { id: 'redbook', label: '小红书 (3:4)', ratio: '3:4' as AspectRatio },
 ];
 
+// 亚马逊 A+ 专用尺寸
+const AMAZON_APLUS_PLATFORMS = [
+  { id: 'aplus_banner', label: '主横幅图 (1464×600)', ratio: '16:9' as AspectRatio },
+  { id: 'aplus_standard', label: '标准展示图 (600×450)', ratio: '4:3' as AspectRatio },
+];
+
 const QUANTITY_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 // 预设模特库
@@ -419,7 +425,9 @@ export const OperationPanel: React.FC = () => {
   // Sync aspect ratio when platform changes
   const handlePlatformChange = (platformId: string) => {
     setSelectedPlatform(platformId);
-    const platform = PLATFORMS.find(p => p.id === platformId);
+    // 根据当前工作流选择对应的平台列表
+    const platformList = activeWorkflow === 'amazon_aplus' ? AMAZON_APLUS_PLATFORMS : PLATFORMS;
+    const platform = platformList.find(p => p.id === platformId);
     if (platform) {
       setAspectRatio(platform.ratio);
     }
@@ -509,6 +517,18 @@ export const OperationPanel: React.FC = () => {
         }
     }
   }, [fusionImages, activeWorkflow]);
+
+  // 切换到亚马逊A+工作流时，自动设置为第一个A+尺寸
+  useEffect(() => {
+    if (activeWorkflow === 'amazon_aplus') {
+      setSelectedPlatform('aplus_banner');
+      setAspectRatio('16:9');
+    } else if (selectedPlatform.startsWith('aplus_')) {
+      // 从A+工作流切换出来时，恢复为通用平台
+      setSelectedPlatform('amazon');
+      setAspectRatio('1:1');
+    }
+  }, [activeWorkflow]);
 
   const handleFaceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -672,8 +692,9 @@ export const OperationPanel: React.FC = () => {
 
             for (let i = 0; i < quantity; i++) {
                 try {
-                    // Build A+ specific prompt
-                    let aplusPrompt = `[TASK]: Amazon A+ Professional E-commerce Page Generation. `;
+                    // Build A+ specific prompt for wedding accessories
+                    let aplusPrompt = `[TASK]: Amazon A+ Professional Wedding Accessories E-commerce Page Generation. `;
+                    aplusPrompt += `[CATEGORY]: Wedding dress accessories (veil, shawl, gloves, petticoat, belt, headpiece). `;
                     aplusPrompt += `[TEMPLATE]: Using ${template.name} layout. `;
                     aplusPrompt += `[DESCRIPTION]: ${template.description}. `;
 
@@ -681,26 +702,34 @@ export const OperationPanel: React.FC = () => {
                         aplusPrompt += `[PRODUCT]: ${productKeywords}. `;
                     }
 
-                    // Add template-specific instructions
+                    // Add template-specific instructions for wedding accessories
                     if (template.id === 'comparison_before_after') {
-                        aplusPrompt += `[LAYOUT]: Split screen with before/after comparison. `;
+                        aplusPrompt += `[LAYOUT]: Split screen with/without wedding accessory, showing the bride's transformation. `;
                     } else if (template.id === 'scene_lifestyle') {
-                        aplusPrompt += `[LAYOUT]: Large lifestyle scene image with product in natural use. `;
-                    } else if (template.id === 'feature_icon_list') {
-                        aplusPrompt += `[LAYOUT]: Product image on left, feature list on right side. `;
+                        aplusPrompt += `[LAYOUT]: Romantic wedding scene with bride wearing the accessory, soft lighting, elegant atmosphere. `;
+                    } else if (template.id === 'feature_wedding_accessories') {
+                        aplusPrompt += `[LAYOUT]: Product display on left, wedding accessory features list on right side. `;
+                    } else if (template.id === 'detail_craftsmanship') {
+                        aplusPrompt += `[LAYOUT]: Macro detail shot showcasing lace, embroidery, pearls, or craftsmanship details. `;
+                    } else if (template.id === 'model_showcase') {
+                        aplusPrompt += `[LAYOUT]: Bride modeling the wedding accessory, professional lighting, wedding setting. `;
                     }
 
                     // Add AI content generation flag
                     if (autoGenerateContent) {
-                        aplusPrompt += `[CONTENT]: Auto-generate professional Amazon copy including title, bullet points, and scenarios. `;
+                        aplusPrompt += `[CONTENT]: Generate professional Amazon copy for wedding accessories including title, bullet points, usage scenarios. `;
                     }
 
-                    aplusPrompt += `[STYLE]: Professional commercial photography, high-end e-commerce quality, clean and premium aesthetic. `;
-                    aplusPrompt += `[FORMAT]: ${aspectRatio} ratio, optimized for Amazon A+ pages.`;
+                    aplusPrompt += `[STYLE]: Professional wedding photography, romantic and elegant aesthetic, soft and flattering lighting, high-end bridal fashion quality. `;
+                    aplusPrompt += `[DETAILS]: Emphasize delicate craftsmanship, premium materials (lace, silk, pearls), comfort, and romantic appeal. `;
+                    aplusPrompt += `[MODEL]: Elegant bride, natural pose, beautiful wedding dress or gown, soft hair and makeup. `;
+                    aplusPrompt += `[LANGUAGE]: CRITICAL - ALL text content MUST be in ENGLISH ONLY. Absolutely NO Chinese characters, NO Asian characters, NO non-English text whatsoever. Every word, title, description must be pure English. `;
+                    aplusPrompt += `[TYPOGRAPHY]: Use professional designer fonts with high aesthetic value. For titles and headings use elegant serif fonts (like Playfair Display, Bodoni, Didot, Garamond) to convey luxury and sophistication. For body text and descriptions use clean modern sans-serif fonts (like Helvetica, Avenir, Futura, Montserrat) for excellent readability. Ensure proper hierarchy, spacing, and visual balance. Text should be beautifully designed, not just functional. `;
+                    aplusPrompt += `[FORMAT]: ${aspectRatio} ratio, optimized for Amazon A+ pages, commercial grade quality.`;
 
                     const url = await generateImage({
                         prompt: aplusPrompt,
-                        negativePrompt: `${negativePrompt}, low quality, bad anatomy, worst quality, text, watermark, blurry, distorted, amateur photography`,
+                        negativePrompt: `${negativePrompt}, low quality, bad anatomy, worst quality, text, watermark, blurry, distorted, amateur photography, gaudy colors, cheap materials, synthetic look, poor craftsmanship, plastic appearance, harsh lighting, unflattering poses, casual clothing, non-wedding setting, inappropriate content, male models unless specified, distracting background elements, poor lace quality, visible seams, ill-fitting garments, outdated styles, cluttered composition, overexposed images, chinese text, chinese characters, asian characters, non-english text, foreign language text, kanji, hanzi, hieroglyphs, cyrillic, arabic script, ugly fonts, comic sans, default system fonts, unprofessional typography`,
                         aspectRatio,
                         imageSize,
                         referenceImage: aplusImages[0], // Use first image as reference
@@ -1243,6 +1272,19 @@ export const OperationPanel: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 scrollbar-hide bg-white dark:bg-studio-900 transition-colors duration-300">
         
+        {/* Banner for Amazon A+ */}
+        {activeWorkflow === 'amazon_aplus' && (
+             <motion.div
+                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/30 dark:to-rose-900/30 border border-pink-100 dark:border-pink-800 rounded-lg p-3.5 flex gap-3"
+             >
+                <div className="text-pink-700 dark:text-pink-400"><ShoppingBag size={16} /></div>
+                <p className="text-xs text-pink-800 dark:text-pink-300 leading-relaxed">
+                   <strong>婚礼配饰 A+ 生成:</strong> 专为头纱、披肩、手套、衬裙等婚礼配饰设计的专业 A+ 页面生成工具。
+                </p>
+             </motion.div>
+        )}
+
         {/* Banner for Agent Batch */}
         {activeWorkflow === 'agent_batch' && (
              <motion.div 
@@ -1494,7 +1536,7 @@ export const OperationPanel: React.FC = () => {
                         )}
                      </div>
                      <input type="file" ref={aplusInputRef} className="hidden" accept="image/*" multiple onChange={handleAplusUpload} />
-                     <p className="text-[10px] text-studio-400 dark:text-studio-500">支持上传多张产品图（平铺、细节、场景等），AI 会综合理解并生成 A+ 页面。</p>
+                     <p className="text-[10px] text-studio-400 dark:text-studio-500">支持上传多张婚礼配饰图（头纱、披肩、手套等），AI 会综合理解并生成专业的 A+ 页面图片。</p>
                 </div>
 
                 {/* 2. Select Template */}
@@ -1529,33 +1571,35 @@ export const OperationPanel: React.FC = () => {
                                 <button
                                     key={template.id}
                                     onClick={() => setSelectedTemplateId(template.id)}
-                                    className={`relative rounded-xl border transition-all overflow-hidden group text-left
+                                    className={`relative rounded-xl border-2 transition-all overflow-hidden group text-left
                                         ${isSelected
-                                            ? 'border-studio-900 dark:border-white ring-2 ring-studio-900/20 dark:ring-white/20 bg-white dark:bg-studio-800 shadow-lg'
-                                            : 'border-studio-200 dark:border-studio-700 bg-white dark:bg-studio-800 hover:border-studio-300 dark:hover:border-studio-600 hover:bg-studio-50 dark:hover:bg-studio-700'}`}
+                                            ? 'border-pink-400 dark:border-pink-500 ring-2 ring-pink-200 dark:ring-pink-800 bg-white dark:bg-studio-800 shadow-lg scale-[1.02]'
+                                            : 'border-studio-200 dark:border-studio-700 bg-white dark:bg-studio-800 hover:border-pink-300 dark:hover:border-pink-600 hover:bg-pink-50 dark:hover:bg-studio-700 hover:scale-[1.01]'}`}
                                 >
                                     <div className="flex gap-3 p-3">
-                                        {/* Thumbnail */}
-                                        <div className="w-20 h-20 rounded-lg overflow-hidden bg-studio-100 dark:bg-studio-700 shrink-0">
-                                            <img src={template.thumbnail} className="w-full h-full object-cover opacity-80" alt={template.name} />
+                                        {/* Thumbnail - 增大尺寸并优化显示 */}
+                                        <div className={`w-28 h-28 rounded-lg overflow-hidden shrink-0 ring-2 transition-all ${isSelected ? 'ring-pink-400 dark:ring-pink-500' : 'ring-studio-200 dark:ring-studio-700'}`}>
+                                            <img src={template.thumbnail} className="w-full h-full object-cover" alt={template.name} />
                                         </div>
 
                                         {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between mb-1">
-                                                <h4 className={`text-sm font-bold truncate ${isSelected ? 'text-studio-900 dark:text-white' : 'text-studio-800 dark:text-studio-200'}`}>
-                                                    {template.name}
-                                                </h4>
-                                                {isSelected && (
-                                                    <div className="ml-2 text-studio-900 dark:text-white shrink-0">
-                                                        <CheckCircle2 size={16} fill="currentColor"/>
-                                                    </div>
-                                                )}
+                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-start justify-between mb-1.5">
+                                                    <h4 className={`text-sm font-bold ${isSelected ? 'text-pink-700 dark:text-pink-400' : 'text-studio-800 dark:text-studio-200'}`}>
+                                                        {template.name}
+                                                    </h4>
+                                                    {isSelected && (
+                                                        <div className="ml-2 text-pink-600 dark:text-pink-400 shrink-0">
+                                                            <CheckCircle2 size={18} fill="currentColor"/>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-studio-500 dark:text-studio-400 leading-relaxed line-clamp-2 mb-2">
+                                                    {template.description}
+                                                </p>
                                             </div>
-                                            <p className="text-[10px] text-studio-500 dark:text-studio-400 leading-relaxed line-clamp-2">
-                                                {template.description}
-                                            </p>
-                                            <div className="mt-1 flex items-center gap-1 text-[9px] text-studio-400 dark:text-studio-500">
+                                            <div className="flex items-center gap-1 text-[9px] text-studio-400 dark:text-studio-500">
                                                 <Layers size={10} />
                                                 <span>{template.modules.length} 个模块</span>
                                             </div>
@@ -1582,7 +1626,7 @@ export const OperationPanel: React.FC = () => {
                     <textarea
                         value={productKeywords}
                         onChange={(e) => setProductKeywords(e.target.value)}
-                        placeholder="例如: 无线蓝牙耳机，降噪，防水IPX7，30小时续航，运动耳机..."
+                        placeholder="例如: 新娘头纱，法式蕾丝，珍珠装饰，手工刺绣，透气面料，S/M/L尺寸，配婚纱礼服，优雅婚礼..."
                         className="w-full h-20 p-3 rounded-lg border border-studio-200 dark:border-studio-700 bg-studio-50 dark:bg-studio-800 text-sm placeholder:text-studio-400 dark:placeholder:text-studio-500 text-studio-900 dark:text-white focus:ring-1 focus:ring-studio-900 dark:focus:ring-white focus:bg-white dark:focus:bg-studio-900 transition-all outline-none resize-none"
                     />
                     <div className="flex items-center gap-2 p-2 bg-studio-50 dark:bg-studio-800 rounded-lg border border-studio-100 dark:border-studio-700">
@@ -1603,17 +1647,35 @@ export const OperationPanel: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 4. Summary */}
-                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
-                    <div className="flex items-center gap-2 font-bold border-b border-amber-200 dark:border-amber-800 pb-1 mb-1">
-                        <ShoppingBag size={12} />
-                        <span>生成预览</span>
+                {/* 4. Summary - 优化婚礼主题配色 */}
+                <div className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-2 border-pink-200 dark:border-pink-800 rounded-xl p-4 text-xs space-y-2 shadow-sm">
+                    <div className="flex items-center gap-2 font-bold text-pink-900 dark:text-pink-200 border-b-2 border-pink-200 dark:border-pink-800 pb-2">
+                        <div className="w-8 h-8 rounded-full bg-pink-500 dark:bg-pink-600 flex items-center justify-center text-white shadow-sm">
+                            <ShoppingBag size={14} />
+                        </div>
+                        <span className="text-sm">婚礼配饰 A+ 生成预览</span>
                     </div>
-                    <div className="space-y-0.5">
-                        <p>📦 已上传 <b>{aplusImages.length}</b> 张产品图</p>
-                        <p>🎨 已选模板: <b>{APLUS_TEMPLATES.find(t => t.id === selectedTemplateId)?.name || '未选择'}</b></p>
-                        <p>✨ 文案生成: <b>{autoGenerateContent ? '开启' : '关闭'}</b></p>
-                        <p>📊 预计输出: <b>{quantity}</b> 张亚马逊 A+ 专业图片</p>
+                    <div className="space-y-1.5 text-pink-900 dark:text-pink-200">
+                        <div className="flex items-center gap-2 py-1 px-2 bg-white/50 dark:bg-pink-950/30 rounded-md">
+                            <span className="text-base">👗</span>
+                            <span>已上传 <b className="text-pink-700 dark:text-pink-300">{aplusImages.length}</b> 张婚礼配饰图</span>
+                        </div>
+                        <div className="flex items-center gap-2 py-1 px-2 bg-white/50 dark:bg-pink-950/30 rounded-md">
+                            <span className="text-base">🎨</span>
+                            <span>已选模板: <b className="text-pink-700 dark:text-pink-300">{APLUS_TEMPLATES.find(t => t.id === selectedTemplateId)?.name || '未选择'}</b></span>
+                        </div>
+                        <div className="flex items-center gap-2 py-1 px-2 bg-white/50 dark:bg-pink-950/30 rounded-md">
+                            <span className="text-base">✨</span>
+                            <span>文案生成: <b className="text-pink-700 dark:text-pink-300">{autoGenerateContent ? '开启' : '关闭'}</b></span>
+                        </div>
+                        <div className="flex items-center gap-2 py-1 px-2 bg-white/50 dark:bg-pink-950/30 rounded-md">
+                            <span className="text-base">📊</span>
+                            <span>预计输出: <b className="text-pink-700 dark:text-pink-300">{quantity}</b> 张专业婚礼配饰 A+ 图片</span>
+                        </div>
+                        <div className="flex items-center gap-2 py-1 px-2 bg-white/50 dark:bg-pink-950/30 rounded-md">
+                            <span className="text-base">📏</span>
+                            <span>尺寸规范: <b className="text-pink-700 dark:text-pink-300">主横幅1464×600 / 标准600×450</b></span>
+                        </div>
                     </div>
                 </div>
 
@@ -2152,12 +2214,12 @@ export const OperationPanel: React.FC = () => {
                  <div className="space-y-1.5">
                      <label className="text-[11px] font-semibold text-studio-500 dark:text-studio-400 flex items-center gap-1"><ShoppingBag size={12}/> 适用平台</label>
                      <div className="relative">
-                         <select 
-                             value={selectedPlatform} 
+                         <select
+                             value={selectedPlatform}
                              onChange={(e) => handlePlatformChange(e.target.value)}
                              className="w-full h-9 pl-2 pr-6 text-xs bg-white dark:bg-studio-800 border border-studio-200 dark:border-studio-700 text-studio-900 dark:text-white rounded-lg outline-none focus:border-studio-900 dark:focus:border-white appearance-none"
                          >
-                             {PLATFORMS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                             {(activeWorkflow === 'amazon_aplus' ? AMAZON_APLUS_PLATFORMS : PLATFORMS).map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                          </select>
                          <ChevronDown className="absolute right-2 top-2.5 text-studio-400 dark:text-studio-500 pointer-events-none" size={14} />
                      </div>
