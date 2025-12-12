@@ -18,6 +18,7 @@ import {
 import { useAppStore } from '../store';
 import { CanvasLayer, AspectRatio, AIActionType } from '../types';
 import { generateImage } from '../services/geminiService';
+import { downloadImagesAsZip, downloadImagesIndividually } from '../utils/downloadUtils';
 
 type MenuType = 'none' | 'filters' | 'arrange' | 'style' | 'textStyle' | 'textColor' | 'textEffect';
 
@@ -75,6 +76,7 @@ export const FloatingToolbar: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState<MenuType>('none');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const primaryLayerId = selectedLayerIds[selectedLayerIds.length - 1];
   const selectedLayer = layers.find(l => l.id === primaryLayerId);
@@ -111,6 +113,51 @@ export const FloatingToolbar: React.FC = () => {
         document.body.removeChild(link);
     } else {
         alert("仅支持图片图层下载");
+    }
+  };
+
+  const handleBatchDownload = async () => {
+    if (selectedLayerIds.length === 0) {
+      alert("请先选择图层");
+      return;
+    }
+
+    // 获取选中的图层
+    const selectedLayers = layers.filter(layer => selectedLayerIds.includes(layer.id));
+
+    // 过滤出图片图层
+    const imageLayers = selectedLayers.filter(
+      layer => layer.type === 'image' && layer.src && layer.visible
+    );
+
+    if (imageLayers.length === 0) {
+      alert("没有可下载的图片图层");
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      setErrorMsg(null);
+
+      // 如果只有一张图片，直接下载
+      if (imageLayers.length === 1) {
+        const layer = imageLayers[0];
+        const link = document.createElement('a');
+        link.href = layer.src!;
+        link.download = `${layer.name}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // 多张图片打包为 ZIP 下载
+        await downloadImagesAsZip(imageLayers);
+      }
+    } catch (error: any) {
+      console.error("批量下载失败:", error);
+      setErrorMsg(error.message || "下载失败，请重试");
+      setTimeout(() => setErrorMsg(null), 3000);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -249,6 +296,12 @@ export const FloatingToolbar: React.FC = () => {
                 <div className="px-3 text-xs text-gray-300">选中 {selectedLayerIds.length} 个图层</div>
                 <div className="w-px h-4 bg-white/10 mx-1" />
                 <ToolBtn icon={Group} onClick={groupSelectedLayers} tooltip="合并图层 (Group)" />
+                <ToolBtn
+                  icon={Download}
+                  onClick={handleBatchDownload}
+                  tooltip="批量下载"
+                  color={isDownloading ? "text-blue-400" : undefined}
+                />
                 <ToolBtn icon={Trash2} color="text-red-400" onClick={removeSelectedLayers} tooltip="删除" />
              </div>
           </div>
@@ -360,7 +413,16 @@ export const FloatingToolbar: React.FC = () => {
                 {selectedLayer.type === 'image' && !isMultiSelect && (
                     <ToolBtn icon={Download} onClick={handleDownload} tooltip="下载" />
                 )}
-                
+
+                {isMultiSelect && (
+                    <ToolBtn
+                      icon={Download}
+                      onClick={handleBatchDownload}
+                      tooltip="批量下载"
+                      color={isDownloading ? "text-blue-400" : undefined}
+                    />
+                )}
+
                 <ToolBtn 
                     icon={Trash2} 
                     color="text-red-400 hover:bg-red-500/20 hover:text-red-300" 
