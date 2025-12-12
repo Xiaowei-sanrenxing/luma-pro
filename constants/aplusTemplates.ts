@@ -3,8 +3,37 @@ import { AmazonAplusTemplate } from '../types';
 /**
  * 亚马逊 A+ 模板库 - 婚礼配饰专业版
  * 针对头纱、披肩、手套、衬裙、腰带、头饰等婚礼配饰产品
+ * 优化：采用极简设计原则，减少文字，增加留白
  */
 export const APLUS_TEMPLATES: AmazonAplusTemplate[] = [
+  // === 简洁对比模板 ===
+  {
+    id: 'minimal_comparison',
+    name: '极简对比 - 效果对比',
+    category: 'comparison',
+    description: '干净简洁的对比展示，突出产品使用前后的变化',
+    thumbnail: 'https://placehold.co/300x200/F472B6/FFFFFF/png?text=Before+%2F+After',
+    modules: [
+      {
+        id: 'before_image',
+        type: 'image',
+        position: { x: 50, y: 100, width: 680, height: 400 },
+        imageSlot: true
+      },
+      {
+        id: 'after_image',
+        type: 'image',
+        position: { x: 734, y: 100, width: 680, height: 400 },
+        imageSlot: true
+      },
+      {
+        id: 'simple_title',
+        type: 'text',
+        position: { x: 0, y: 0, width: 1464, height: 80 },
+        textSlot: { type: 'title', placeholder: 'BEAUTIFUL TRANSFORMATION', maxLength: 30 }
+      }
+    ]
+  },
   // === 对比图模板 ===
   {
     id: 'comparison_before_after',
@@ -34,71 +63,71 @@ export const APLUS_TEMPLATES: AmazonAplusTemplate[] = [
     ]
   },
 
-  // === 场景图模板 ===
+  // === 大图场景模板 ===
   {
-    id: 'scene_lifestyle',
-    name: '婚礼场景 - 浪漫时刻',
+    id: 'hero_scene',
+    name: '主角场景 - 浪漫时刻',
     category: 'scene',
-    description: '展示配饰在真实婚礼场景中的应用效果，营造浪漫优雅的氛围',
-    thumbnail: 'https://placehold.co/300x200/60A5FA/FFFFFF/png?text=Wedding+Scene',
+    description: '大图展示配饰在婚礼场景中的应用，简洁标题',
+    thumbnail: 'https://placehold.co/300x200/60A5FA/FFFFFF/png?text=Hero+Scene',
     modules: [
       {
         id: 'main_scene',
         type: 'image',
-        position: { x: 0, y: 0, width: 1464, height: 450 },
+        position: { x: 0, y: 0, width: 1464, height: 520 },
         imageSlot: true
       },
       {
-        id: 'subtitle',
+        id: 'short_title',
         type: 'text',
-        position: { x: 100, y: 470, width: 1264, height: 130 },
-        textSlot: { type: 'subtitle', placeholder: '精致头纱点缀，让新娘在婚礼当天绽放最美的光彩', maxLength: 100 }
+        position: { x: 100, y: 540, width: 1264, height: 60 },
+        textSlot: { type: 'title', placeholder: 'YOUR PERFECT DAY', maxLength: 25 }
       }
     ]
   },
 
-  // === 功能说明模板 ===
+  // === 极简功能模板 ===
   {
-    id: 'feature_wedding_accessories',
-    name: '婚礼配饰 - 功能亮点',
+    id: 'minimal_features',
+    name: '核心卖点 - 精简要点',
     category: 'feature',
-    description: '左侧展示精致配饰，右侧列出5-7个产品卖点和工艺特色',
+    description: '产品左图，右侧3个核心卖点，配合图标',
     thumbnail: 'https://placehold.co/300x200/FBBF24/FFFFFF/png?text=Key+Features',
     modules: [
       {
         id: 'product_image',
         type: 'image',
-        position: { x: 50, y: 50, width: 664, height: 500 },
+        position: { x: 50, y: 100, width: 664, height: 400 },
         imageSlot: true
       },
       {
-        id: 'features_list',
+        id: 'three_benefits',
         type: 'text',
-        position: { x: 750, y: 50, width: 664, height: 500 },
-        textSlot: { type: 'feature', placeholder: '精美蕾丝手工制作，舒适透气不刺激肌肤，多种尺寸可选，完美搭配婚纱礼服', maxLength: 500 }
+        position: { x: 750, y: 100, width: 664, height: 400 },
+        textSlot: { type: 'feature', placeholder: '✓ Premium Quality\n✓ Comfortable Fit\n✓ Elegant Design', maxLength: 200 }
       }
     ]
   },
 
-  // === 细节展示模板 ===
+  // === 特写细节模板 ===
   {
-    id: 'detail_craftsmanship',
-    name: '工艺细节 - 精致做工',
+    id: 'macro_detail',
+    name: '特写细节 - 一眼看穿',
     category: 'detail',
-    description: '特写展示婚礼配饰的精湛工艺和细节处理',
-    thumbnail: 'https://placehold.co/300x200/34D399/FFFFFF/png?text=Craftsmanship',
+    description: '大图特写展示一个关键细节，简短说明',
+    thumbnail: 'https://placehold.co/300x200/34D399/FFFFFF/png?text=Detail',
     modules: [
       {
         id: 'detail_main',
         type: 'image',
-        position: { x: 0, y: 0, width: 1464, height: 550 },
+        position: { x: 0, y: 0, width: 1464, height: 560 },
         imageSlot: true
       },
       {
-        id: 'detail_desc',
+        id: 'detail_tag',
         type: 'text',
-        position: { x: 100, y: 570, width: 1264, height: 80 },
-        textSlot: { type: 'description', placeholder: '手工刺绣细节，彰显品质与匠心', maxLength: 80 }
+        position: { x: 100, y: 570, width: 1264, height: 50 },
+        textSlot: { type: 'description', placeholder: 'HANDCRAFTED DETAIL', maxLength: 30 }
       }
     ]
   },
@@ -172,6 +201,29 @@ export const APLUS_TEMPLATES: AmazonAplusTemplate[] = [
     ]
   },
 
+  // === 数字展示模板 ===
+  {
+    id: 'number_showcase',
+    name: '数据亮点 - 数字说话',
+    category: 'feature',
+    description: '用大号数字展示核心优势，极简设计',
+    thumbnail: 'https://placehold.co/300x200/FBBF24/FFFFFF/png?text=Data',
+    modules: [
+      {
+        id: 'product_center',
+        type: 'image',
+        position: { x: 482, y: 50, width: 500, height: 350 },
+        imageSlot: true
+      },
+      {
+        id: 'three_numbers',
+        type: 'text',
+        position: { x: 0, y: 420, width: 1464, height: 200 },
+        textSlot: { type: 'feature', placeholder: '100%\nHANDMADE\n\n24h\nFAST SHIPPING\n\n50K+\nHAPPY BRIDES', maxLength: 100 }
+      }
+    ]
+  },
+
   // === 材质展示模板 ===
   {
     id: 'material_quality',
@@ -198,9 +250,9 @@ export const APLUS_TEMPLATES: AmazonAplusTemplate[] = [
 
 // 模板分类
 export const APLUS_CATEGORIES = [
-  { id: 'comparison', label: '对比展示', icon: 'ArrowLeftRight', count: 1 },
+  { id: 'comparison', label: '对比展示', icon: 'ArrowLeftRight', count: 2 },
   { id: 'scene', label: '场景图', icon: 'Image', count: 4 },
   { id: 'detail', label: '细节图', icon: 'ZoomIn', count: 2 },
-  { id: 'feature', label: '功能说明', icon: 'Star', count: 2 },
+  { id: 'feature', label: '功能说明', icon: 'Star', count: 3 },
   { id: 'step', label: '使用步骤', icon: 'ListOrdered', count: 0 }
 ];

@@ -21,6 +21,33 @@ LIGHTING: Professional cinematic lighting, soft diffused light, high dynamic ran
 COMPOSITION: Balanced and elegant composition, depth of field to separate subject from background (bokeh) where appropriate.
 `;
 
+// --- WEDDING ACCESSORIES PRODUCT CONSISTENCY PROMPT ---
+// Critical for e-commerce: Generated images must match physical products exactly to prevent customer complaints
+const WEDDING_ACCESSORIES_CONSISTENCY_PROMPT = `
+CRITICAL REQUIREMENTS FOR WEDDING ACCESSORIES (E-COMMERCE COMPLIANCE):
+1. VEILS & SHEER FABRICS: Must maintain transparency levels exactly. Lace patterns must be sharp, clear, and identical to reference.
+2. LACE & EMBROIDERY: Intricate patterns must be preserved with 100% accuracy. No simplification, blurring, or pattern alteration.
+3. PEARLS/CRYSTALS/BEADS: Maintain natural shine, reflection, and exact positioning. Do not alter size, quantity, or placement.
+4. GLOVES & FITTED ITEMS: Preserve exact fit and fabric texture. Maintain sheerness/opacity precisely as shown.
+5. FABRIC TRANSPARENCY: Sheer materials must remain sheer at identical levels. Never make transparent fabrics appear solid.
+6. COLOR ACCURACY: Exact color matching is mandatory, especially critical for white/ivory/cream variations.
+7. DIMENSIONS: Product size and proportions must remain exactly identical.
+
+ABSOLUTE PROHIBITIONS:
+- Do NOT thicken, thin, or alter fabric density
+- Do NOT alter lace pattern density or complexity
+- Do NOT remove, add, or reposition decorative elements
+- Do NOT change transparency or opacity levels
+- Do NOT blur, soften, or lose edge definition
+- Do NOT alter reflections on pearls/crystals/metallic elements
+
+E-COMMERCE IMPACT: Any deviation from the physical product will result in customer returns and negative reviews.
+`;
+
+// --- E-COMMERCE NEGATIVE PROMPT ---
+// Prevents common issues with product photography
+const ECOMMERCE_NEGATIVE_PROMPT = `blur, blurry, out of focus, low quality, pixelated, deformed, distorted, disproportionate, wrong proportions, color shift, wrong color, faded color, oversaturated, missing details, missing lace pattern, missing decorations, opaque veil, solid veil, transparent fabric made solid, thick fabric, wrong texture, stiff material, artificial looking, plastic texture, unnatural sheen, harsh shadows, flat lighting`;
+
 /**
  * 辅助函数：将 Base64 字符串转换为 Gemini 兼容的部分
  */
@@ -269,12 +296,16 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
   // 强制电商优化逻辑 + 大师级摄影 Prompt
   let finalPrompt = `
   ${PHOTOGRAPHY_MASTER_PROMPT}
+  ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT}
   ${generationConfig.prompt}
   `;
 
-  if (generationConfig.negativePrompt) {
-    finalPrompt += `\nNegative prompt: ${generationConfig.negativePrompt}`;
-  }
+  // 默认负面提示词 + 用户自定义负面提示词
+  const combinedNegativePrompt = generationConfig.negativePrompt
+    ? `${ECOMMERCE_NEGATIVE_PROMPT}, ${generationConfig.negativePrompt}`
+    : ECOMMERCE_NEGATIVE_PROMPT;
+
+  finalPrompt += `\nNegative prompt: ${combinedNegativePrompt}`;
 
   // --- Special Handling for MASKING (Eraser / Local Enhancement) ---
   if (generationConfig.maskImage) {
@@ -284,10 +315,20 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
           parts.push(base64ToPart(generationConfig.maskImage));
 
           const maskInstruction = `
-          [INSTRUCTION]: The second image provided is a MASK.
-          The WHITE area in the mask indicates the selection.
-          The BLACK area in the mask should remain UNCHANGED.
-          Apply the changes ONLY to the white masked region.
+          [INSTRUCTION]: WEDDING ACCESSORIES INPAINTING - Precision Local Enhancement.
+          ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT}
+
+          MASK GUIDELINES:
+          The second image is a MASK. WHITE areas = EDIT region. BLACK areas = PRESERVE completely.
+
+          WEDDING ACCESSORIES CRITICAL RULES:
+          1. LACE EDGE PRECISION: If editing near lace, maintain sharp, defined edges. No blurring of lace patterns.
+          2. TRANSPARENCY PROTECTION: Never alter transparency of sheer fabrics in unmasked areas.
+          3. DECORATIVE ELEMENTS: Pearls, crystals, beads at mask edges must remain perfectly intact.
+          4. SEAMLESS INTEGRATION: Edited areas must blend perfectly without visible transitions.
+          5. FABRIC CONTINUITY: Ensure fabric texture and behavior remain consistent across mask boundaries.
+
+          Apply changes ONLY to white masked regions while protecting all adjacent wedding accessory details.
           `;
           finalPrompt = maskInstruction + finalPrompt;
       }
@@ -296,7 +337,19 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
   else if (generationConfig.workflow === 'fusion') {
       if (generationConfig.referenceImages && generationConfig.referenceImages.length > 0) {
           generationConfig.referenceImages.forEach(img => parts.push(base64ToPart(img)));
-          finalPrompt = `[Instruction]: The provided images are multiple angles/details of the SAME product (mannequin). Analyze all images to understand the garment's structure, fabric, and details comprehensively. \n` + finalPrompt;
+
+          let fusionInstruction = `[Instruction]: WEDDING ACCESSORIES FUSION - Multiple Reference Analysis. `;
+          fusionInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+          fusionInstruction += `MULTI-ANGLE CONSISTENCY REQUIREMENTS: `;
+          fusionInstruction += `1. LACE PATTERN CONTINUITY: Ensure lace patterns remain consistent across all angles. Maintain identical density and complexity. `;
+          fusionInstruction += `2. TRANSPARENCY UNIFORMITY: Sheer fabrics must maintain identical transparency levels from all perspectives. `;
+          fusionInstruction += `3. DECORATIVE ALIGNMENT: Pearls, crystals, beads must maintain consistent positioning and reflections. `;
+          fusionInstruction += `4. FABRIC BEHAVIOR: Understand how drapes, folds, and layers behave from different angles. `;
+          fusionInstruction += `5. COLOR CONSISTENCY: Exact color matching across all references, especially for white/ivory variations. `;
+          fusionInstruction += `ANALYZE: Study all images comprehensively to understand the complete product structure, fabric behavior, and decorative details. `;
+          fusionInstruction += `SYNTHESIZE: Create a unified representation that honors all reference angles while maintaining product integrity. \n`;
+
+          finalPrompt = fusionInstruction + finalPrompt;
       } else if (generationConfig.referenceImage) {
            parts.push(base64ToPart(generationConfig.referenceImage));
       }
@@ -306,10 +359,16 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
       if (generationConfig.referenceImage) {
           parts.push(base64ToPart(generationConfig.referenceImage));
 
-          let bgInstruction = `[Instruction]: You are a world-class photo retoucher and compositor. `;
-          bgInstruction += `TASK: Background Replacement. `;
-          bgInstruction += `PRESERVE: The main subject (product/person) MUST remain exactly identical in pose, clothing, and features. Do not change the subject. `;
-          bgInstruction += `CHANGE: Replace the background completely based on the description to create a masterpiece. `;
+          let bgInstruction = `[Instruction]: You are a world-class photo retoucher and compositor specializing in luxury e-commerce photography. `;
+          bgInstruction += `TASK: Background Replacement for wedding accessories. `;
+          bgInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+          bgInstruction += `CRITICAL PRESERVATION RULES: `;
+          bgInstruction += `1. VEILS & SHEER FABRICS: Transparency levels must remain EXACTLY identical. Lace patterns must stay sharp and clear. `;
+          bgInstruction += `2. DECORATIVE ELEMENTS: Pearls, crystals, beads, embroidery must maintain exact position and natural reflections. `;
+          bgInstruction += `3. FABRIC APPEARANCE: Do NOT thicken or thin any fabric. Sheer materials must stay sheer. `;
+          bgInstruction += `4. SHADOWS: Use soft, minimal shadows for sheer fabrics. Avoid heavy shadows that obscure transparency. `;
+          bgInstruction += `5. COLOR INTEGRITY: White/ivory/cream variations must remain precisely as in original. `;
+          bgInstruction += `CHANGE: Replace ONLY the background. Create a masterpiece that enhances but never alters the product. `;
 
           if (generationConfig.bgSwapConfig?.lighting) {
               const lightingMap: Record<string, string> = {
@@ -348,14 +407,23 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
       if (generationConfig.referenceImage) {
           parts.push(base64ToPart(generationConfig.referenceImage));
 
-          let swapInstruction = `[Instruction]: This first image is the PRODUCT/BODY REFERENCE. `;
+          let swapInstruction = `[Instruction]: This first image is the WEDDING ACCESSORIES PRODUCT/BODY REFERENCE. `;
+          swapInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+
           if (generationConfig.faceSwapConfig?.mode === 'model_swap') {
-               swapInstruction += `Keep the outfit and background exactly as is. GENERATE A NEW MODEL (face, hair, skin tone) inside the clothes. `;
+               swapInstruction += `WEDDING ATTIRE PRESERVATION: Keep ALL wedding accessories exactly as is - veils, headpieces, gloves, sashes, jewelry. `;
+               swapInstruction += `FABRIC INTEGRITY: Maintain lace patterns, transparency levels, and decorative elements. `;
+               swapInstruction += `GENERATE A NEW MODEL (face, hair, skin tone) wearing the exact same wedding attire. `;
           } else if (generationConfig.faceSwapConfig?.mode === 'head_swap') {
-               swapInstruction += `Keep the outfit, body posture, and background. SWAP THE HEAD AND HAIR only. `;
+               swapInstruction += `ACCESSORIES PRESERVATION: Keep ALL wedding accessories exactly - veils must maintain position and transparency, headpieces intact. `;
+               swapInstruction += `FIT INTEGRITY: Preserve how accessories fit and interact with hair/head. `;
+               swapInstruction += `SWAP THE HEAD AND HAIR only, ensuring seamless integration with existing accessories. `;
           } else {
-               swapInstruction += `Keep the outfit, hair, body, and background. SWAP ONLY THE FACIAL FEATURES (eyes, nose, mouth). `;
+               swapInstruction += `MINIMAL CHANGE APPROACH: Keep EVERYTHING else exactly the same - veils, hair, headpieces, earrings, necklaces. `;
+               swapInstruction += `SWAP ONLY THE CORE FACIAL FEATURES (eyes, nose, mouth) while preserving makeup and accessory interactions. `;
           }
+
+          swapInstruction += `CRITICAL: Do NOT alter fit, positioning, or appearance of any wedding accessories. Preserve natural interactions between accessories and model. `;
           finalPrompt = swapInstruction + finalPrompt;
       }
 
@@ -369,11 +437,11 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
   else {
       if (generationConfig.poseImage) {
           parts.push(base64ToPart(generationConfig.poseImage));
-          finalPrompt = `[Instruction]: Use this first image as a POSE REFERENCE (skeleton/structure). The generated model must follow this exact pose.\n\n${finalPrompt}`;
+          finalPrompt = `[Instruction]: WEDDING ACCESSORIES POSE REFERENCE. Use this first image as a POSE REFERENCE (skeleton/structure). ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} The generated model must follow this exact pose while preserving all wedding accessory integrity.\n\n${finalPrompt}`;
       }
       if (generationConfig.referenceImage && !generationConfig.maskImage) {
           parts.push(base64ToPart(generationConfig.referenceImage));
-          finalPrompt = `[Instruction]: Use this image as the CONTENT REFERENCE (Subject/Product). Maintain the character's outfit and product details from this image.\n\n${finalPrompt}`;
+          finalPrompt = `[Instruction]: WEDDING ACCESSORIES CONTENT REFERENCE. ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} Use this image as the CONTENT REFERENCE (Subject/Product). Maintain ALL wedding accessories exactly - veils, lace patterns, transparency levels, decorative elements, and product details from this image.\n\n${finalPrompt}`;
       }
   }
 

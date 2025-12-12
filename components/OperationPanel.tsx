@@ -692,44 +692,43 @@ export const OperationPanel: React.FC = () => {
 
             for (let i = 0; i < quantity; i++) {
                 try {
-                    // Build A+ specific prompt for wedding accessories
-                    let aplusPrompt = `[TASK]: Amazon A+ Professional Wedding Accessories E-commerce Page Generation. `;
-                    aplusPrompt += `[CATEGORY]: Wedding dress accessories (veil, shawl, gloves, petticoat, belt, headpiece). `;
-                    aplusPrompt += `[TEMPLATE]: Using ${template.name} layout. `;
-                    aplusPrompt += `[DESCRIPTION]: ${template.description}. `;
+                    // Build A+ specific prompt for wedding accessories - Minimalist Approach
+                    let aplusPrompt = `Amazon A+ wedding accessories page. `;
+                    aplusPrompt += `Template: ${template.name}. `;
 
                     if (productKeywords) {
-                        aplusPrompt += `[PRODUCT]: ${productKeywords}. `;
+                        aplusPrompt += `Product: ${productKeywords}. `;
                     }
 
-                    // Add template-specific instructions for wedding accessories
-                    if (template.id === 'comparison_before_after') {
-                        aplusPrompt += `[LAYOUT]: Split screen with/without wedding accessory, showing the bride's transformation. `;
-                    } else if (template.id === 'scene_lifestyle') {
-                        aplusPrompt += `[LAYOUT]: Romantic wedding scene with bride wearing the accessory, soft lighting, elegant atmosphere. `;
-                    } else if (template.id === 'feature_wedding_accessories') {
-                        aplusPrompt += `[LAYOUT]: Product display on left, wedding accessory features list on right side. `;
-                    } else if (template.id === 'detail_craftsmanship') {
-                        aplusPrompt += `[LAYOUT]: Macro detail shot showcasing lace, embroidery, pearls, or craftsmanship details. `;
+                    // Add template-specific minimal instructions
+                    if (template.id === 'minimal_comparison' || template.id === 'comparison_before_after') {
+                        aplusPrompt += `Split screen: before/after wearing accessory. Simple transformation. Clean layout. `;
+                    } else if (template.id === 'hero_scene' || template.id === 'scene_lifestyle') {
+                        aplusPrompt += `Large hero image. Romantic wedding scene. Bride with accessory. Soft lighting. Minimal title. `;
+                    } else if (template.id === 'minimal_features' || template.id === 'feature_wedding_accessories') {
+                        aplusPrompt += `Product left. 3 key benefits right with icons. Very minimal text. Lots of white space. `;
+                    } else if (template.id === 'macro_detail' || template.id === 'detail_craftsmanship') {
+                        aplusPrompt += `Macro detail shot. Focus on one key feature. Clean presentation. `;
                     } else if (template.id === 'model_showcase') {
-                        aplusPrompt += `[LAYOUT]: Bride modeling the wedding accessory, professional lighting, wedding setting. `;
+                        aplusPrompt += `Elegant bride modeling. Clean background. Minimal text overlay. `;
+                    } else if (template.id === 'number_showcase') {
+                        aplusPrompt += `Product centered. Three big numbers below showing key benefits. Bold typography. Minimal design. `;
                     }
 
-                    // Add AI content generation flag
+                    // Minimal content generation
                     if (autoGenerateContent) {
-                        aplusPrompt += `[CONTENT]: Generate professional Amazon copy for wedding accessories including title, bullet points, usage scenarios. `;
+                        aplusPrompt += `Generate 1 short title (3-5 words) and 1-2 bullet points. `;
                     }
 
-                    aplusPrompt += `[STYLE]: Professional wedding photography, romantic and elegant aesthetic, soft and flattering lighting, high-end bridal fashion quality. `;
-                    aplusPrompt += `[DETAILS]: Emphasize delicate craftsmanship, premium materials (lace, silk, pearls), comfort, and romantic appeal. `;
-                    aplusPrompt += `[MODEL]: Elegant bride, natural pose, beautiful wedding dress or gown, soft hair and makeup. `;
-                    aplusPrompt += `[LANGUAGE]: CRITICAL - ALL text content MUST be in ENGLISH ONLY. Absolutely NO Chinese characters, NO Asian characters, NO non-English text whatsoever. Every word, title, description must be pure English. `;
-                    aplusPrompt += `[TYPOGRAPHY]: Use professional designer fonts with high aesthetic value. For titles and headings use elegant serif fonts (like Playfair Display, Bodoni, Didot, Garamond) to convey luxury and sophistication. For body text and descriptions use clean modern sans-serif fonts (like Helvetica, Avenir, Futura, Montserrat) for excellent readability. Ensure proper hierarchy, spacing, and visual balance. Text should be beautifully designed, not just functional. `;
-                    aplusPrompt += `[FORMAT]: ${aspectRatio} ratio, optimized for Amazon A+ pages, commercial grade quality.`;
+                    aplusPrompt += `Style: Clean, minimalist design. Plenty of white space. Professional wedding photography. `;
+                    aplusPrompt += `Typography: Elegant fonts. Clear hierarchy. `;
+                    aplusPrompt += `Layout: Less text, more visual. Focus on product. `;
+                    aplusPrompt += `Language: English only. No other languages. `;
+                    aplusPrompt += `Format: ${aspectRatio} ratio, Amazon A+ quality.`;
 
                     const url = await generateImage({
                         prompt: aplusPrompt,
-                        negativePrompt: `${negativePrompt}, low quality, bad anatomy, worst quality, text, watermark, blurry, distorted, amateur photography, gaudy colors, cheap materials, synthetic look, poor craftsmanship, plastic appearance, harsh lighting, unflattering poses, casual clothing, non-wedding setting, inappropriate content, male models unless specified, distracting background elements, poor lace quality, visible seams, ill-fitting garments, outdated styles, cluttered composition, overexposed images, chinese text, chinese characters, asian characters, non-english text, foreign language text, kanji, hanzi, hieroglyphs, cyrillic, arabic script, ugly fonts, comic sans, default system fonts, unprofessional typography`,
+                        negativePrompt: `${negativePrompt}, low quality, text, watermark, blurry, cluttered, too much text, long paragraphs, busy design, gaudy colors, amateur, chinese text, non-english`,
                         aspectRatio,
                         imageSize,
                         referenceImage: aplusImages[0], // Use first image as reference

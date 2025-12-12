@@ -15,6 +15,33 @@ LIGHTING: Professional cinematic lighting, soft diffused light, high dynamic ran
 COMPOSITION: Balanced and elegant composition, depth of field with bokeh where appropriate.
 `;
 
+// --- WEDDING ACCESSORIES PRODUCT CONSISTENCY PROMPT ---
+// Critical for e-commerce: Generated images must match physical products exactly to prevent customer complaints
+const WEDDING_ACCESSORIES_CONSISTENCY_PROMPT = `
+CRITICAL REQUIREMENTS FOR WEDDING ACCESSORIES (E-COMMERCE COMPLIANCE):
+1. VEILS & SHEER FABRICS: Must maintain transparency levels exactly. Lace patterns must be sharp, clear, and identical to reference.
+2. LACE & EMBROIDERY: Intricate patterns must be preserved with 100% accuracy. No simplification, blurring, or pattern alteration.
+3. PEARLS/CRYSTALS/BEADS: Maintain natural shine, reflection, and exact positioning. Do not alter size, quantity, or placement.
+4. GLOVES & FITTED ITEMS: Preserve exact fit and fabric texture. Maintain sheerness/opacity precisely as shown.
+5. FABRIC TRANSPARENCY: Sheer materials must remain sheer at identical levels. Never make transparent fabrics appear solid.
+6. COLOR ACCURACY: Exact color matching is mandatory, especially critical for white/ivory/cream variations.
+7. DIMENSIONS: Product size and proportions must remain exactly identical.
+
+ABSOLUTE PROHIBITIONS:
+- Do NOT thicken, thin, or alter fabric density
+- Do NOT alter lace pattern density or complexity
+- Do NOT remove, add, or reposition decorative elements
+- Do NOT change transparency or opacity levels
+- Do NOT blur, soften, or lose edge definition
+- Do NOT alter reflections on pearls/crystals/metallic elements
+
+E-COMMERCE IMPACT: Any deviation from the physical product will result in customer returns and negative reviews.
+`;
+
+// --- E-COMMERCE NEGATIVE PROMPT ---
+// Prevents common issues with product photography
+const ECOMMERCE_NEGATIVE_PROMPT = `blur, blurry, out of focus, low quality, pixelated, deformed, distorted, disproportionate, wrong proportions, color shift, wrong color, faded color, oversaturated, missing details, missing lace pattern, missing decorations, opaque veil, solid veil, transparent fabric made solid, thick fabric, wrong texture, stiff material, artificial looking, plastic texture, unnatural sheen, harsh shadows, flat lighting`;
+
 // ============ 端点配置 ============
 
 interface EndpointConfig {
@@ -295,10 +322,14 @@ export const generateImageWithOpenAI = async (
   console.log("[API] Final image model:", config.imageModel);
 
   // 构建 Prompt
-  let finalPrompt = `${PHOTOGRAPHY_MASTER_PROMPT}\n${generationConfig.prompt}`;
-  if (generationConfig.negativePrompt) {
-    finalPrompt += `\nNegative prompt: ${generationConfig.negativePrompt}`;
-  }
+  let finalPrompt = `${PHOTOGRAPHY_MASTER_PROMPT}\n${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT}\n${generationConfig.prompt}`;
+
+  // 默认负面提示词 + 用户自定义负面提示词
+  const combinedNegativePrompt = generationConfig.negativePrompt
+    ? `${ECOMMERCE_NEGATIVE_PROMPT}, ${generationConfig.negativePrompt}`
+    : ECOMMERCE_NEGATIVE_PROMPT;
+
+  finalPrompt += `\nNegative prompt: ${combinedNegativePrompt}`;
 
   // 收集参考图片
   const images: string[] = [];
