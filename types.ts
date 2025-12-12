@@ -2,9 +2,9 @@ import { CSSProperties } from 'react';
 
 export type LayerType = 'image' | 'text' | 'shape';
 
-export type AspectRatio = "1:1" | "3:4" | "4:3" | "9:16" | "16:9";
+export type AspectRatio = "1:1" | "3:4" | "4:3" | "9:16" | "16:9" | "amazon-banner" | "amazon-standard";
 export type ImageSize = "1K" | "2K" | "4K";
-export type WorkflowType = 'home' | 'tutorials' | 'agent_batch' | 'face_swap' | 'bg_swap' | 'fission' | 'fusion' | 'creative' | 'detail' | 'extraction' | 'planting' | 'layer_management' | 'settings';
+export type WorkflowType = 'home' | 'tutorials' | 'agent_batch' | 'face_swap' | 'bg_swap' | 'fission' | 'fusion' | 'creative' | 'detail' | 'extraction' | 'planting' | 'layer_management' | 'settings' | 'amazon_aplus';
 
 // --- Face Swap Specific Types ---
 export type FaceSwapMode = 'model_swap' | 'head_swap' | 'face_swap';
@@ -150,4 +150,52 @@ export interface UserLicense {
   licenseType?: LicenseType;
   expiresAt?: string | null;
   isPermanent?: boolean;
+}
+
+// --- Amazon A+ Specific Types ---
+
+export interface AmazonAplusTemplate {
+  id: string;
+  name: string;
+  category: 'comparison' | 'scene' | 'detail' | 'feature' | 'step';
+  description: string;
+  thumbnail: string;
+  modules: AplusModule[];
+}
+
+export interface AplusModule {
+  id: string;
+  type: 'image' | 'text' | 'image-text';
+  position: { x: number; y: number; width: number; height: number };
+  imageSlot?: boolean;
+  textSlot?: {
+    type: 'title' | 'subtitle' | 'feature' | 'description' | 'spec';
+    placeholder: string;
+    maxLength: number;
+  };
+}
+
+export interface AmazonAplusConfig {
+  templateId: string;
+  productKeywords: string;
+  productImages: string[];
+  aspectRatio: AspectRatio;
+  imageSize: ImageSize;
+  quantity: number;
+  autoGenerateContent: boolean;
+  customContent?: {
+    title?: string;
+    subtitle?: string;
+    features?: string[];
+    scenes?: string[];
+    specs?: Record<string, string>;
+  };
+}
+
+export interface AplusContentResult {
+  title: string;
+  subtitle: string;
+  features: string[];
+  scenes: string[];
+  specs: Record<string, string>;
 }

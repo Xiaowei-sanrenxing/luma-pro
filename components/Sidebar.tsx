@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { 
-  Users, Image as ImageIcon, Layers, Combine, 
+import {
+  Users, Image as ImageIcon, Layers, Combine,
   Settings, List,
-  Bot, Aperture, Scan, ZoomIn, Sprout, Sun, Moon, LogOut
+  Bot, Aperture, Scan, ZoomIn, Sprout, Sun, Moon, LogOut, ShoppingBag
 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { WorkflowType } from '../types';
@@ -67,9 +67,16 @@ const TOOLS = [
         desc: '只需上传1张服装图，即可生成相同穿搭、多种模特姿势与场景的“种草”展示图。轻松满足商品主图、详情页、社交媒体等多场景出图需求！',
         preview: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=250&fit=crop&q=80'
     },
-    { 
-        id: 'layer_management', 
-        icon: <List size={20} />, 
+    {
+        id: 'amazon_aplus',
+        icon: <ShoppingBag size={20} />,
+        label: '亚马逊 A+',
+        desc: '专业 A+ 页面生成工具。一键套用预设模板，自动生成标题、卖点、场景描述。支持亚马逊标准尺寸。',
+        preview: 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=400&h=250&fit=crop'
+    },
+    {
+        id: 'layer_management',
+        icon: <List size={20} />,
         label: '图层管理',
         desc: '管理画布上的所有图层，调整顺序、锁定或隐藏。',
         preview: null

@@ -14,6 +14,8 @@ const SIZES: { label: string; ratio: AspectRatio; w: number; h: number }[] = [
     { label: '9:16 (Story)', ratio: '9:16', w: 1080, h: 1920 },
     { label: '1:1 (Square)', ratio: '1:1', w: 1080, h: 1080 },
     { label: '16:9 (Video)', ratio: '16:9', w: 1920, h: 1080 },
+    { label: 'Amazon 横幅 (1464×600)', ratio: '16:9', w: 1464, h: 600 },
+    { label: 'Amazon 标准 (600×450)', ratio: '4:3', w: 600, h: 450 },
 ];
 
 export const HeaderControls: React.FC = () => {

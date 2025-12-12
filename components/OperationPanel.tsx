@@ -5,12 +5,14 @@ import { generateImage, analyzeImage, enhancePrompt } from '../services/geminiSe
 import { AspectRatio, ImageSize, WorkflowType, FaceSwapMode, FaceModelSource, LightingType } from '../types';
 import { calculateLayerSize } from '../utils/helpers';
 import { SettingsPanel } from './SettingsPanel';
+import { APLUS_TEMPLATES, APLUS_CATEGORIES } from '../constants/aplusTemplates';
 import {
   Loader2, Upload, Wand2, Info, Check, User, Activity, Sparkles,
   CheckCircle2, Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown,
   Layers, Lightbulb, Plus, Image as ImageIcon,
   Smile, Frown, Meh, ScanFace, ShoppingBag, Hash, Maximize, ChevronDown,
   UserCheck, UserCog, UserPlus, Sun, Moon, Lamp, Aperture, Palette,
+  LayoutTemplate, // For Amazon A+
   // New Icons for Advanced Scenes
   Castle, Flame, Church, Flower2, // Classical
   Trees, Grape, Waves, Leaf, Cloud, Mountain, // Natural
@@ -398,12 +400,21 @@ export const OperationPanel: React.FC = () => {
 
   const [isEnhancing, setIsEnhancing] = useState(false);
 
+  // --- AMAZON A+ STATE ---
+  const [aplusImages, setAplusImages] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [aplusCategory, setAplusCategory] = useState<string>('comparison');
+  const [productKeywords, setProductKeywords] = useState<string>('');
+  const [autoGenerateContent, setAutoGenerateContent] = useState<boolean>(true);
+  const [generatedAplusImages, setGeneratedAplusImages] = useState<string[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fusionInputRef = useRef<HTMLInputElement>(null);
   const faceInputRef = useRef<HTMLInputElement>(null);
   const poseInputRef = useRef<HTMLInputElement>(null);
   const sceneInputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
+  const aplusInputRef = useRef<HTMLInputElement>(null);
 
   // Sync aspect ratio when platform changes
   const handlePlatformChange = (platformId: string) => {
@@ -535,6 +546,35 @@ export const OperationPanel: React.FC = () => {
       }
   };
 
+  // Handle multiple uploads for Amazon A+
+  const handleAplusUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+          Array.from(files).forEach((file) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  setAplusImages(prev => {
+                      const newImages = [...prev, reader.result as string];
+                      // Sync main image for preview if first upload
+                      if (prev.length === 0) setUploadedImage(newImages[0]);
+                      return newImages;
+                  });
+              };
+              reader.readAsDataURL(file as Blob);
+          });
+      }
+      e.target.value = '';
+  };
+
+  const removeAplusImage = (index: number) => {
+      setAplusImages(prev => {
+          const newImages = prev.filter((_, i) => i !== index);
+          if (newImages.length === 0) setUploadedImage(null);
+          else if (index === 0) setUploadedImage(newImages[0]);
+          return newImages;
+      });
+  };
+
   const handleAnalyze = async () => {
     if (!uploadedImage) return;
     setIsGenerating(true);
@@ -607,6 +647,81 @@ export const OperationPanel: React.FC = () => {
       };
 
       try {
+        // --- AMAZON A+ MODE ---
+        if (activeWorkflow === 'amazon_aplus') {
+            if (aplusImages.length === 0) {
+                alert("请先上传产品图");
+                setIsGenerating(false);
+                return;
+            }
+            if (!selectedTemplateId) {
+                alert("请选择一个模板");
+                setIsGenerating(false);
+                return;
+            }
+
+            const template = APLUS_TEMPLATES.find(t => t.id === selectedTemplateId);
+            if (!template) {
+                alert("模板不存在，请重新选择");
+                setIsGenerating(false);
+                return;
+            }
+
+            let completedCount = 0;
+            const total = quantity;
+
+            for (let i = 0; i < quantity; i++) {
+                try {
+                    // Build A+ specific prompt
+                    let aplusPrompt = `[TASK]: Amazon A+ Professional E-commerce Page Generation. `;
+                    aplusPrompt += `[TEMPLATE]: Using ${template.name} layout. `;
+                    aplusPrompt += `[DESCRIPTION]: ${template.description}. `;
+
+                    if (productKeywords) {
+                        aplusPrompt += `[PRODUCT]: ${productKeywords}. `;
+                    }
+
+                    // Add template-specific instructions
+                    if (template.id === 'comparison_before_after') {
+                        aplusPrompt += `[LAYOUT]: Split screen with before/after comparison. `;
+                    } else if (template.id === 'scene_lifestyle') {
+                        aplusPrompt += `[LAYOUT]: Large lifestyle scene image with product in natural use. `;
+                    } else if (template.id === 'feature_icon_list') {
+                        aplusPrompt += `[LAYOUT]: Product image on left, feature list on right side. `;
+                    }
+
+                    // Add AI content generation flag
+                    if (autoGenerateContent) {
+                        aplusPrompt += `[CONTENT]: Auto-generate professional Amazon copy including title, bullet points, and scenarios. `;
+                    }
+
+                    aplusPrompt += `[STYLE]: Professional commercial photography, high-end e-commerce quality, clean and premium aesthetic. `;
+                    aplusPrompt += `[FORMAT]: ${aspectRatio} ratio, optimized for Amazon A+ pages.`;
+
+                    const url = await generateImage({
+                        prompt: aplusPrompt,
+                        negativePrompt: `${negativePrompt}, low quality, bad anatomy, worst quality, text, watermark, blurry, distorted, amateur photography`,
+                        aspectRatio,
+                        imageSize,
+                        referenceImage: aplusImages[0], // Use first image as reference
+                        workflow: activeWorkflow
+                    });
+
+                    await addGeneratedLayer(url, `A+ ${i + 1}`, i);
+
+                } catch (e) {
+                    console.error(`A+ image ${i} failed:`, e);
+                } finally {
+                    completedCount++;
+                    // Optional: Show progress
+                    console.log(`Generated ${completedCount}/${total} A+ images`);
+                }
+            }
+
+            setIsGenerating(false);
+            return;
+        }
+
         // --- 0. AGENT BATCH MODE ---
         if (activeWorkflow === 'agent_batch') {
             if (batchImages.length === 0) {
@@ -1036,7 +1151,7 @@ export const OperationPanel: React.FC = () => {
     const map: Record<WorkflowType, string> = {
       home: '欢迎使用', layer_management: '图层管理', face_swap: 'AI 虚拟模特', bg_swap: '场景重构',
       fission: '姿势裂变', fusion: '人台融合', creative: '创意生图', detail: '细节放大', extraction: '商品提取',
-      agent_batch: 'Agent 智造模式', planting: '一键种草',
+      agent_batch: 'Agent 智造模式', planting: '一键种草', amazon_aplus: '亚马逊 A+ 页面',
       tutorials: '使用教程', settings: '设置'
     };
     return map[wf];
@@ -1048,10 +1163,12 @@ export const OperationPanel: React.FC = () => {
       if (activeWorkflow === 'settings') return true;
       // Fixed: Only check batchImages for agent_batch
       if (activeWorkflow === 'agent_batch') return batchImages.length === 0;
-      if (activeWorkflow === 'creative') return false; 
+      // Check aplusImages for amazon_aplus
+      if (activeWorkflow === 'amazon_aplus') return aplusImages.length === 0 || !selectedTemplateId;
+      if (activeWorkflow === 'creative') return false;
       // For all other workflows, image is required
       return !uploadedImage;
-  }, [isGenerating, activeWorkflow, batchImages.length, uploadedImage]);
+  }, [isGenerating, activeWorkflow, batchImages.length, uploadedImage, aplusImages.length, selectedTemplateId]);
 
   // --- RENDER COMPONENT: LAYER LIST ---
   if (activeWorkflow === 'layer_management') {
@@ -1115,6 +1232,7 @@ export const OperationPanel: React.FC = () => {
             {activeWorkflow === 'extraction' && <ScanLine className="w-5 h-5 text-studio-800 dark:text-studio-200" />}
             {activeWorkflow === 'detail' && <ZoomIn className="w-5 h-5 text-studio-800 dark:text-studio-200" />}
             {activeWorkflow === 'planting' && <Sprout className="w-5 h-5 text-studio-800 dark:text-studio-200" />}
+            {activeWorkflow === 'amazon_aplus' && <ShoppingBag className="w-5 h-5 text-studio-800 dark:text-studio-200" />}
             {activeWorkflow === 'settings' && <Settings className="w-5 h-5 text-studio-800 dark:text-studio-200" />}
             {getWorkflowTitle(activeWorkflow)}
             </h2>
@@ -1337,6 +1455,168 @@ export const OperationPanel: React.FC = () => {
                     <p>您选择了 <b>{PLANTING_PRESETS.find(p => p.id === plantingPreset)?.label}</b> 风格。</p>
                     <p>AI 将保持服装不变，生成真人模特在 <b>{PLANTING_PRESETS.find(p => p.id === plantingPreset)?.desc}</b> 环境下的高质量生活照。</p>
                 </div>
+            </div>
+        )}
+
+        {/* --- AMAZON A+ WORKFLOW --- */}
+        {activeWorkflow === 'amazon_aplus' && (
+            <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-500">
+
+                {/* 1. Upload Product Images */}
+                <div className="space-y-3">
+                     <label className="text-sm font-semibold text-studio-800 dark:text-studio-200 flex items-center gap-2">
+                        <ImageIcon size={14} className="text-studio-600 dark:text-studio-400"/>
+                        1. 上传产品图 (Product Images)
+                     </label>
+                     <div className="grid grid-cols-3 gap-2">
+                        {aplusImages.map((img, idx) => (
+                            <div key={idx} className="relative aspect-square rounded-lg border border-studio-200 dark:border-studio-700 overflow-hidden group bg-studio-50 dark:bg-studio-800">
+                                <img src={img} className="w-full h-full object-cover" alt={`Product ${idx}`} />
+                                <button
+                                    onClick={() => removeAplusImage(idx)}
+                                    className="absolute top-1 right-1 bg-white/90 text-studio-900 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:text-red-500"
+                                >
+                                    <X size={12} />
+                                </button>
+                                {idx === 0 && <span className="absolute bottom-0 left-0 right-0 bg-studio-900/80 text-white text-[9px] text-center py-0.5 backdrop-blur-sm">主图 (Main)</span>}
+                            </div>
+                        ))}
+                        {aplusImages.length < 10 && (
+                            <div
+                                onClick={() => aplusInputRef.current?.click()}
+                                className="aspect-square rounded-lg border-2 border-dashed border-studio-200 dark:border-studio-700 bg-studio-50 dark:bg-studio-800 hover:bg-studio-100 dark:hover:bg-studio-700 hover:border-studio-400 dark:hover:border-studio-500 flex flex-col items-center justify-center cursor-pointer transition-all gap-1 group"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-white dark:bg-studio-700 border border-studio-200 dark:border-studio-600 flex items-center justify-center text-studio-400 dark:text-studio-500 group-hover:scale-110 transition-transform">
+                                    <Plus size={16} />
+                                </div>
+                                <span className="text-[9px] text-studio-500 dark:text-studio-400 font-medium">添加图片</span>
+                            </div>
+                        )}
+                     </div>
+                     <input type="file" ref={aplusInputRef} className="hidden" accept="image/*" multiple onChange={handleAplusUpload} />
+                     <p className="text-[10px] text-studio-400 dark:text-studio-500">支持上传多张产品图（平铺、细节、场景等），AI 会综合理解并生成 A+ 页面。</p>
+                </div>
+
+                {/* 2. Select Template */}
+                <div className="space-y-3">
+                    <label className="text-sm font-semibold text-studio-800 dark:text-studio-200 flex items-center gap-2">
+                        <LayoutTemplate size={14} className="text-studio-600 dark:text-studio-400"/>
+                        2. 选择模板 (Template)
+                    </label>
+
+                    {/* Category Tabs */}
+                    <div className="flex bg-studio-100 dark:bg-studio-800 p-1 rounded-lg overflow-x-auto scrollbar-hide">
+                        {APLUS_CATEGORIES.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setAplusCategory(cat.id)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap
+                                    ${aplusCategory === cat.id
+                                        ? 'bg-white dark:bg-studio-700 text-studio-900 dark:text-white shadow-sm'
+                                        : 'text-studio-500 dark:text-studio-400 hover:text-studio-700 dark:hover:text-studio-200'}`}
+                            >
+                                <span className="text-[11px] font-medium">{cat.label}</span>
+                                {cat.count > 0 && <span className={`text-[9px] px-1.5 py-0.5 rounded ${aplusCategory === cat.id ? 'bg-studio-100 dark:bg-studio-600 text-studio-700 dark:text-studio-200' : 'bg-studio-200 dark:bg-studio-700 text-studio-500 dark:text-studio-400'}`}>{cat.count}</span>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Template Cards */}
+                    <div className="grid grid-cols-1 gap-3 max-h-[280px] overflow-y-auto pr-1 scrollbar-hide">
+                        {APLUS_TEMPLATES.filter(t => t.category === aplusCategory).map(template => {
+                            const isSelected = selectedTemplateId === template.id;
+                            return (
+                                <button
+                                    key={template.id}
+                                    onClick={() => setSelectedTemplateId(template.id)}
+                                    className={`relative rounded-xl border transition-all overflow-hidden group text-left
+                                        ${isSelected
+                                            ? 'border-studio-900 dark:border-white ring-2 ring-studio-900/20 dark:ring-white/20 bg-white dark:bg-studio-800 shadow-lg'
+                                            : 'border-studio-200 dark:border-studio-700 bg-white dark:bg-studio-800 hover:border-studio-300 dark:hover:border-studio-600 hover:bg-studio-50 dark:hover:bg-studio-700'}`}
+                                >
+                                    <div className="flex gap-3 p-3">
+                                        {/* Thumbnail */}
+                                        <div className="w-20 h-20 rounded-lg overflow-hidden bg-studio-100 dark:bg-studio-700 shrink-0">
+                                            <img src={template.thumbnail} className="w-full h-full object-cover opacity-80" alt={template.name} />
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between mb-1">
+                                                <h4 className={`text-sm font-bold truncate ${isSelected ? 'text-studio-900 dark:text-white' : 'text-studio-800 dark:text-studio-200'}`}>
+                                                    {template.name}
+                                                </h4>
+                                                {isSelected && (
+                                                    <div className="ml-2 text-studio-900 dark:text-white shrink-0">
+                                                        <CheckCircle2 size={16} fill="currentColor"/>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-studio-500 dark:text-studio-400 leading-relaxed line-clamp-2">
+                                                {template.description}
+                                            </p>
+                                            <div className="mt-1 flex items-center gap-1 text-[9px] text-studio-400 dark:text-studio-500">
+                                                <Layers size={10} />
+                                                <span>{template.modules.length} 个模块</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {APLUS_TEMPLATES.filter(t => t.category === aplusCategory).length === 0 && (
+                        <div className="text-center py-8 text-studio-400 dark:text-studio-500">
+                            <span className="text-sm">该分类暂无模板，敬请期待</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* 3. Product Keywords */}
+                <div className="space-y-3">
+                    <label className="text-sm font-semibold text-studio-800 dark:text-studio-200 flex items-center gap-2">
+                        <Hash size={14} className="text-studio-600 dark:text-studio-400"/>
+                        3. 产品关键词 (Keywords)
+                    </label>
+                    <textarea
+                        value={productKeywords}
+                        onChange={(e) => setProductKeywords(e.target.value)}
+                        placeholder="例如: 无线蓝牙耳机，降噪，防水IPX7，30小时续航，运动耳机..."
+                        className="w-full h-20 p-3 rounded-lg border border-studio-200 dark:border-studio-700 bg-studio-50 dark:bg-studio-800 text-sm placeholder:text-studio-400 dark:placeholder:text-studio-500 text-studio-900 dark:text-white focus:ring-1 focus:ring-studio-900 dark:focus:ring-white focus:bg-white dark:focus:bg-studio-900 transition-all outline-none resize-none"
+                    />
+                    <div className="flex items-center gap-2 p-2 bg-studio-50 dark:bg-studio-800 rounded-lg border border-studio-100 dark:border-studio-700">
+                        <button
+                            onClick={() => setAutoGenerateContent(!autoGenerateContent)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all
+                                ${autoGenerateContent
+                                    ? 'bg-studio-900 dark:bg-white text-white dark:text-studio-900'
+                                    : 'bg-white dark:bg-studio-700 text-studio-600 dark:text-studio-300 border border-studio-200 dark:border-studio-600'}`}
+                        >
+                            {autoGenerateContent && <CheckCircle2 size={12} fill="currentColor"/>}
+                            <Sparkles size={12} />
+                            AI 自动生成文案
+                        </button>
+                        <span className="text-[10px] text-studio-500 dark:text-studio-400 leading-relaxed">
+                            {autoGenerateContent ? '✅ AI 将根据关键词自动生成标题、卖点、场景描述' : '关闭后仅生成图片布局'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 4. Summary */}
+                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <div className="flex items-center gap-2 font-bold border-b border-amber-200 dark:border-amber-800 pb-1 mb-1">
+                        <ShoppingBag size={12} />
+                        <span>生成预览</span>
+                    </div>
+                    <div className="space-y-0.5">
+                        <p>📦 已上传 <b>{aplusImages.length}</b> 张产品图</p>
+                        <p>🎨 已选模板: <b>{APLUS_TEMPLATES.find(t => t.id === selectedTemplateId)?.name || '未选择'}</b></p>
+                        <p>✨ 文案生成: <b>{autoGenerateContent ? '开启' : '关闭'}</b></p>
+                        <p>📊 预计输出: <b>{quantity}</b> 张亚马逊 A+ 专业图片</p>
+                    </div>
+                </div>
+
             </div>
         )}
 
@@ -1934,12 +2214,13 @@ export const OperationPanel: React.FC = () => {
           {isGenerating ? (
             <>
               <Loader2 className="animate-spin" size={18} />
-              {activeWorkflow === 'agent_batch' ? 'AI 生产中...' : '生成图片'}
+              {activeWorkflow === 'agent_batch' ? 'AI 生产中...' : activeWorkflow === 'amazon_aplus' ? 'A+ 生成中...' : '生成图片'}
             </>
           ) : (
              <>
              {activeWorkflow === 'detail' && <ZoomIn size={18} />}
              {activeWorkflow === 'planting' && <Sprout size={18} />}
+             {activeWorkflow === 'amazon_aplus' && <ShoppingBag size={18} />}
              {activeWorkflow === 'agent_batch' && <Bot size={18} />}
              {activeWorkflow === 'fission' && <Layers size={18} />}
              {activeWorkflow === 'fusion' && <CheckCircle2 size={18} />}
@@ -1949,13 +2230,14 @@ export const OperationPanel: React.FC = () => {
              {activeWorkflow === 'creative' && <Wand2 size={18} />}
              <span>
                 {
-                    activeWorkflow === 'agent_batch' ? `批量生产 (${Math.max(1, batchImages.length) * Math.max(1, batchSelectedPoseIds.length) * Math.max(1, batchSelectedSceneIds.length)}图)` : 
+                    activeWorkflow === 'agent_batch' ? `批量生产 (${Math.max(1, batchImages.length) * Math.max(1, batchSelectedPoseIds.length) * Math.max(1, batchSelectedSceneIds.length)}图)` :
                     activeWorkflow === 'fission' ? `批量生产 (${selectedPoses.length || 1}图)` :
                     activeWorkflow === 'bg_swap' ? `批量生产 (${selectedSceneIds.length || 1}图)` :
-                    activeWorkflow === 'face_swap' ? '生成 AI 模特' : 
-                    activeWorkflow === 'extraction' ? '立即提取' : 
-                    activeWorkflow === 'detail' ? '生成细节图' : 
-                    activeWorkflow === 'planting' ? '生成种草图' : 
+                    activeWorkflow === 'amazon_aplus' ? `生成 A+ 图片 (${quantity}张)` :
+                    activeWorkflow === 'face_swap' ? '生成 AI 模特' :
+                    activeWorkflow === 'extraction' ? '立即提取' :
+                    activeWorkflow === 'detail' ? '生成细节图' :
+                    activeWorkflow === 'planting' ? '生成种草图' :
                     '立即生成'
                 }
              </span>
