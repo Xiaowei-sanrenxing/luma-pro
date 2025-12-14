@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { GenerationConfig, AnalysisResult } from "../types";
 import { useAppStore } from "../store";
@@ -8,7 +6,7 @@ import { isSupabaseConfigured } from "./supabaseClient";
 import {
   analyzeImageWithOpenAI,
   enhancePromptWithOpenAI,
-  generateImageWithOpenAI
+  generateImageWithOpenAI,
 } from "./openaiCompatibleService";
 
 // --- MASTER PHOTOGRAPHY PROMPT ---
@@ -54,12 +52,12 @@ const ECOMMERCE_NEGATIVE_PROMPT = `blur, blurry, out of focus, low quality, pixe
 const base64ToPart = (base64: string, mimeType: string = "image/png") => {
   // 移除 data URL 前缀 (data:image/png;base64,...)
   // Handle cases where the string might not have the prefix or different mimetype
-  const data = base64.includes(',') ? base64.split(',')[1] : base64; 
+  const data = base64.includes(",") ? base64.split(",")[1] : base64;
   return {
     inlineData: {
       data,
-      mimeType
-    }
+      mimeType,
+    },
   };
 };
 
@@ -72,7 +70,7 @@ const getApiKey = () => {
   if (globalApiKey) return globalApiKey;
   if (customApiKey) return customApiKey;
   // Fallback to process.env for local/AI Studio, or Vercel env if properly bundled
-  return process.env.API_KEY || '';
+  return process.env.API_KEY || "";
 };
 
 /**
@@ -88,30 +86,34 @@ const getApiConfig = () => {
     return {
       apiKey: customApiKey,
       baseUrl: apiEndpoint,
-      useCustomEndpoint: true
+      useCustomEndpoint: true,
     };
   }
 
   // 否则使用 Gemini 配置
   return {
-    apiKey: globalApiKey || process.env.API_KEY || '',
+    apiKey: globalApiKey || process.env.API_KEY || "",
     baseUrl: undefined,
-    useCustomEndpoint: false
+    useCustomEndpoint: false,
   };
 };
 
 /**
  * 创建 GoogleGenAI 实例
  */
-const createAiClient = (config: { apiKey: string; baseUrl?: string; useCustomEndpoint?: boolean }) => {
+const createAiClient = (config: {
+  apiKey: string;
+  baseUrl?: string;
+  useCustomEndpoint?: boolean;
+}) => {
   const options: any = { apiKey: config.apiKey };
 
   // 如果有自定义 baseUrl，使用 httpOptions 设置
   if (config.baseUrl) {
     options.httpOptions = { baseUrl: config.baseUrl };
-    console.log('[API Config] Using custom endpoint:', config.baseUrl);
+    console.log("[API Config] Using custom endpoint:", config.baseUrl);
   } else {
-    console.log('[API Config] Using default Google endpoint');
+    console.log("[API Config] Using default Google endpoint");
   }
 
   return new GoogleGenAI(options);
@@ -123,7 +125,9 @@ const createAiClient = (config: { apiKey: string; baseUrl?: string; useCustomEnd
  *
  * 路由逻辑：如果配置了通用 API，使用 OpenAI 兼容服务；否则使用 Gemini
  */
-export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
+export const analyzeImage = async (
+  base64Image: string
+): Promise<AnalysisResult> => {
   // 每次请求前重新获取配置
   const config = getApiConfig();
 
@@ -132,7 +136,11 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
   // 如果使用自定义端点，调用 OpenAI 兼容服务
   if (config.useCustomEndpoint && config.baseUrl) {
     console.log("[API Router] Using OpenAI Compatible API for image analysis");
-    return await analyzeImageWithOpenAI(config.baseUrl, config.apiKey, base64Image);
+    return await analyzeImageWithOpenAI(
+      config.baseUrl,
+      config.apiKey,
+      base64Image
+    );
   }
 
   // 否则使用 Gemini API
@@ -152,18 +160,17 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
     `;
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash', // Downgraded from gemini-3-pro-preview to reduce 403 chance on basic analysis
+      model: "gemini-2.5-flash", // Downgraded from gemini-3-pro-preview to reduce 403 chance on basic analysis
       contents: {
-        parts: [imagePart, { text: prompt }]
+        parts: [imagePart, { text: prompt }],
       },
       config: {
-        responseMimeType: 'application/json'
-      }
+        responseMimeType: "application/json",
+      },
     });
 
     const text = response.text || "{}";
     return JSON.parse(text) as AnalysisResult;
-
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     throw error; // 让 UI 层处理错误 (如 403)
@@ -183,14 +190,16 @@ export const enhancePrompt = async (input: string): Promise<string> => {
 
   // 如果使用自定义端点，调用 OpenAI 兼容服务
   if (config.useCustomEndpoint && config.baseUrl) {
-    console.log("[API Router] Using OpenAI Compatible API for prompt enhancement");
+    console.log(
+      "[API Router] Using OpenAI Compatible API for prompt enhancement"
+    );
     return await enhancePromptWithOpenAI(config.baseUrl, config.apiKey, input);
   }
 
   // 否则使用 Gemini API
   console.log("[API Router] Using Gemini API for prompt enhancement");
   const ai = createAiClient(config);
-  
+
   try {
     const systemPrompt = `
     Role: Professional E-commerce Photographer & AI Prompt Engineer.
@@ -208,7 +217,7 @@ export const enhancePrompt = async (input: string): Promise<string> => {
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: systemPrompt,
     });
 
@@ -227,14 +236,15 @@ export const enhancePrompt = async (input: string): Promise<string> => {
 const checkLicenseBeforeGenerate = async (): Promise<void> => {
   // 如果 Supabase 未配置，跳过授权检查（开发模式）
   if (!isSupabaseConfigured()) {
-    console.log('[License] Supabase not configured, skipping license check');
+    console.log("[License] Supabase not configured, skipping license check");
     return;
   }
 
-  const { user, userLicense, setUserLicense, setShowLicenseModal } = useAppStore.getState();
+  const { user, userLicense, setUserLicense, setShowLicenseModal } =
+    useAppStore.getState();
 
   if (!user) {
-    throw new Error('请先登录');
+    throw new Error("请先登录");
   }
 
   // 快速路径：本地缓存有效且未过期
@@ -253,7 +263,7 @@ const checkLicenseBeforeGenerate = async (): Promise<void> => {
 
   if (!license.hasValidLicense) {
     setShowLicenseModal(true);
-    throw new Error('LICENSE_REQUIRED');
+    throw new Error("LICENSE_REQUIRED");
   }
 };
 
@@ -264,13 +274,15 @@ const checkLicenseBeforeGenerate = async (): Promise<void> => {
  *
  * 路由逻辑：如果配置了通用 API，使用 OpenAI 兼容服务；否则使用 Gemini
  */
-export const generateImage = async (generationConfig: GenerationConfig): Promise<string> => {
+export const generateImage = async (
+  generationConfig: GenerationConfig
+): Promise<string> => {
   // 授权检查
   try {
     await checkLicenseBeforeGenerate();
   } catch (e: any) {
-    if (e.message === 'LICENSE_REQUIRED') {
-      throw new Error('请先激活授权码以使用 AI 功能');
+    if (e.message === "LICENSE_REQUIRED") {
+      throw new Error("请先激活授权码以使用 AI 功能");
     }
     throw e;
   }
@@ -282,8 +294,14 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
 
   // 如果使用自定义端点，调用 OpenAI 兼容服务
   if (config.useCustomEndpoint && config.baseUrl) {
-    console.log("[API Router] Using OpenAI Compatible API for image generation");
-    return await generateImageWithOpenAI(config.baseUrl, config.apiKey, generationConfig);
+    console.log(
+      "[API Router] Using OpenAI Compatible API for image generation"
+    );
+    return await generateImageWithOpenAI(
+      config.baseUrl,
+      config.apiKey,
+      generationConfig
+    );
   }
 
   // 否则使用 Gemini API
@@ -309,12 +327,12 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
 
   // --- Special Handling for MASKING (Eraser / Local Enhancement) ---
   if (generationConfig.maskImage) {
-      // Order: Original Image, Mask Image, Prompt
-      if (generationConfig.referenceImage) {
-          parts.push(base64ToPart(generationConfig.referenceImage));
-          parts.push(base64ToPart(generationConfig.maskImage));
+    // Order: Original Image, Mask Image, Prompt
+    if (generationConfig.referenceImage) {
+      parts.push(base64ToPart(generationConfig.referenceImage));
+      parts.push(base64ToPart(generationConfig.maskImage));
 
-          const maskInstruction = `
+      const maskInstruction = `
           [INSTRUCTION]: WEDDING ACCESSORIES INPAINTING - Precision Local Enhancement.
           ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT}
 
@@ -330,119 +348,153 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
 
           Apply changes ONLY to white masked regions while protecting all adjacent wedding accessory details.
           `;
-          finalPrompt = maskInstruction + finalPrompt;
-      }
+      finalPrompt = maskInstruction + finalPrompt;
+    }
   }
   // --- Special Handling for Fusion (Multiple Images) ---
-  else if (generationConfig.workflow === 'fusion') {
-      if (generationConfig.referenceImages && generationConfig.referenceImages.length > 0) {
-          generationConfig.referenceImages.forEach(img => parts.push(base64ToPart(img)));
+  else if (generationConfig.workflow === "fusion") {
+    if (
+      generationConfig.referenceImages &&
+      generationConfig.referenceImages.length > 0
+    ) {
+      generationConfig.referenceImages.forEach((img) =>
+        parts.push(base64ToPart(img))
+      );
 
-          let fusionInstruction = `[Instruction]: WEDDING ACCESSORIES FUSION - Multiple Reference Analysis. `;
-          fusionInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
-          fusionInstruction += `MULTI-ANGLE CONSISTENCY REQUIREMENTS: `;
-          fusionInstruction += `1. LACE PATTERN CONTINUITY: Ensure lace patterns remain consistent across all angles. Maintain identical density and complexity. `;
-          fusionInstruction += `2. TRANSPARENCY UNIFORMITY: Sheer fabrics must maintain identical transparency levels from all perspectives. `;
-          fusionInstruction += `3. DECORATIVE ALIGNMENT: Pearls, crystals, beads must maintain consistent positioning and reflections. `;
-          fusionInstruction += `4. FABRIC BEHAVIOR: Understand how drapes, folds, and layers behave from different angles. `;
-          fusionInstruction += `5. COLOR CONSISTENCY: Exact color matching across all references, especially for white/ivory variations. `;
-          fusionInstruction += `ANALYZE: Study all images comprehensively to understand the complete product structure, fabric behavior, and decorative details. `;
-          fusionInstruction += `SYNTHESIZE: Create a unified representation that honors all reference angles while maintaining product integrity. \n`;
+      let fusionInstruction = `[Instruction]: WEDDING ACCESSORIES FUSION - Multiple Reference Analysis. `;
+      fusionInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+      fusionInstruction += `MULTI-ANGLE CONSISTENCY REQUIREMENTS: `;
+      fusionInstruction += `1. LACE PATTERN CONTINUITY: Ensure lace patterns remain consistent across all angles. Maintain identical density and complexity. `;
+      fusionInstruction += `2. TRANSPARENCY UNIFORMITY: Sheer fabrics must maintain identical transparency levels from all perspectives. `;
+      fusionInstruction += `3. DECORATIVE ALIGNMENT: Pearls, crystals, beads must maintain consistent positioning and reflections. `;
+      fusionInstruction += `4. FABRIC BEHAVIOR: Understand how drapes, folds, and layers behave from different angles. `;
+      fusionInstruction += `5. COLOR CONSISTENCY: Exact color matching across all references, especially for white/ivory variations. `;
+      fusionInstruction += `ANALYZE: Study all images comprehensively to understand the complete product structure, fabric behavior, and decorative details. `;
+      fusionInstruction += `SYNTHESIZE: Create a unified representation that honors all reference angles while maintaining product integrity. \n`;
 
-          finalPrompt = fusionInstruction + finalPrompt;
-      } else if (generationConfig.referenceImage) {
-           parts.push(base64ToPart(generationConfig.referenceImage));
-      }
+      finalPrompt = fusionInstruction + finalPrompt;
+    } else if (generationConfig.referenceImage) {
+      parts.push(base64ToPart(generationConfig.referenceImage));
+    }
   }
   // --- Special Handling for Background Swap ---
-  else if (generationConfig.workflow === 'bg_swap') {
-      if (generationConfig.referenceImage) {
-          parts.push(base64ToPart(generationConfig.referenceImage));
+  else if (generationConfig.workflow === "bg_swap") {
+    if (generationConfig.referenceImage) {
+      parts.push(base64ToPart(generationConfig.referenceImage));
 
-          let bgInstruction = `[Instruction]: You are a world-class photo retoucher and compositor specializing in luxury e-commerce photography. `;
-          bgInstruction += `TASK: Background Replacement for wedding accessories. `;
-          bgInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
-          bgInstruction += `CRITICAL PRESERVATION RULES: `;
-          bgInstruction += `1. VEILS & SHEER FABRICS: Transparency levels must remain EXACTLY identical. Lace patterns must stay sharp and clear. `;
-          bgInstruction += `2. DECORATIVE ELEMENTS: Pearls, crystals, beads, embroidery must maintain exact position and natural reflections. `;
-          bgInstruction += `3. FABRIC APPEARANCE: Do NOT thicken or thin any fabric. Sheer materials must stay sheer. `;
-          bgInstruction += `4. SHADOWS: Use soft, minimal shadows for sheer fabrics. Avoid heavy shadows that obscure transparency. `;
-          bgInstruction += `5. COLOR INTEGRITY: White/ivory/cream variations must remain precisely as in original. `;
-          bgInstruction += `CHANGE: Replace ONLY the background. Create a masterpiece that enhances but never alters the product. `;
+      let bgInstruction = `[Instruction]: You are a world-class photo retoucher and compositor specializing in luxury e-commerce photography. `;
+      bgInstruction += `TASK: Background Replacement for wedding accessories. `;
+      bgInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+      bgInstruction += `CRITICAL PRESERVATION RULES: `;
+      bgInstruction += `1. VEILS & SHEER FABRICS: Transparency levels must remain EXACTLY identical. Lace patterns must stay sharp and clear. `;
+      bgInstruction += `2. DECORATIVE ELEMENTS: Pearls, crystals, beads, embroidery must maintain exact position and natural reflections. `;
+      bgInstruction += `3. FABRIC APPEARANCE: Do NOT thicken or thin any fabric. Sheer materials must stay sheer. `;
+      bgInstruction += `4. SHADOWS: Use soft, minimal shadows for sheer fabrics. Avoid heavy shadows that obscure transparency. `;
+      bgInstruction += `5. COLOR INTEGRITY: White/ivory/cream variations must remain precisely as in original. `;
+      bgInstruction += `CHANGE: Replace ONLY the background. Create a masterpiece that enhances but never alters the product. `;
 
-          if (generationConfig.bgSwapConfig?.lighting) {
-              const lightingMap: Record<string, string> = {
-                  'soft': 'Soft, diffused softbox lighting, flattering for wedding portraits, minimal shadows.',
-                  'natural': 'Natural daylight, golden hour sun-kissed look, warm and organic tones.',
-                  'studio': 'High-contrast professional studio strobe lighting, sharp shadows, commercial look.',
-                  'cinematic': 'Dramatic cinematic lighting, rim light to separate subject from background, moody atmosphere.'
-              };
-              bgInstruction += `LIGHTING: ${lightingMap[generationConfig.bgSwapConfig.lighting]} Ensure the subject's lighting blends realistically with the new background. `;
-          }
-
-          if (generationConfig.bgSwapConfig?.sceneType) {
-               if (generationConfig.bgSwapConfig.sceneType === 'vintage') {
-                  bgInstruction += `ATMOSPHERE: Nostalgic, warm tones, film grain texture, rich details, elegant and timeless. `;
-               } else if (generationConfig.bgSwapConfig.sceneType === 'natural') {
-                  bgInstruction += `ATMOSPHERE: Fresh air, organic textures, wide dynamic range, airy and romantic. `;
-               } else if (generationConfig.bgSwapConfig.sceneType === 'classical') {
-                  bgInstruction += `ATMOSPHERE: Grand, aristocratic, luxury textures (stone, marble, velvet), serious and holy. `;
-               } else if (generationConfig.bgSwapConfig.sceneType === 'modern') {
-                  bgInstruction += `ATMOSPHERE: Clean lines, neutral colors, minimalist, high-fashion magazine style. `;
-               }
-          }
-
-          if (generationConfig.bgSwapConfig?.blur && generationConfig.bgSwapConfig.blur > 0) {
-               const blurDesc = generationConfig.bgSwapConfig.blur > 60 ? 'Strong bokeh, creamy background blur, f/1.2 aperture' :
-                                generationConfig.bgSwapConfig.blur > 30 ? 'Moderate depth of field, pleasing bokeh, f/2.8 aperture' :
-                                'Slight depth of field separation, f/5.6 aperture';
-               bgInstruction += `DEPTH OF FIELD: ${blurDesc}. Focus strictly on the product. `;
-          }
-
-          finalPrompt = bgInstruction + finalPrompt;
+      if (generationConfig.bgSwapConfig?.lighting) {
+        const lightingMap: Record<string, string> = {
+          soft: "Soft, diffused softbox lighting, flattering for wedding portraits, minimal shadows.",
+          natural:
+            "Natural daylight, golden hour sun-kissed look, warm and organic tones.",
+          studio:
+            "High-contrast professional studio strobe lighting, sharp shadows, commercial look.",
+          cinematic:
+            "Dramatic cinematic lighting, rim light to separate subject from background, moody atmosphere.",
+        };
+        bgInstruction += `LIGHTING: ${
+          lightingMap[generationConfig.bgSwapConfig.lighting]
+        } Ensure the subject's lighting blends realistically with the new background. `;
       }
+
+      if (generationConfig.bgSwapConfig?.sceneType) {
+        if (generationConfig.bgSwapConfig.sceneType === "vintage") {
+          bgInstruction += `ATMOSPHERE: Nostalgic, warm tones, film grain texture, rich details, elegant and timeless. `;
+        } else if (generationConfig.bgSwapConfig.sceneType === "natural") {
+          bgInstruction += `ATMOSPHERE: Fresh air, organic textures, wide dynamic range, airy and romantic. `;
+        } else if (generationConfig.bgSwapConfig.sceneType === "classical") {
+          bgInstruction += `ATMOSPHERE: Grand, aristocratic, luxury textures (stone, marble, velvet), serious and holy. `;
+        } else if (generationConfig.bgSwapConfig.sceneType === "modern") {
+          bgInstruction += `ATMOSPHERE: Clean lines, neutral colors, minimalist, high-fashion magazine style. `;
+        }
+      }
+
+      if (
+        generationConfig.bgSwapConfig?.blur &&
+        generationConfig.bgSwapConfig.blur > 0
+      ) {
+        const blurDesc =
+          generationConfig.bgSwapConfig.blur > 60
+            ? "Strong bokeh, creamy background blur, f/1.2 aperture"
+            : generationConfig.bgSwapConfig.blur > 30
+            ? "Moderate depth of field, pleasing bokeh, f/2.8 aperture"
+            : "Slight depth of field separation, f/5.6 aperture";
+        bgInstruction += `DEPTH OF FIELD: ${blurDesc}. Focus strictly on the product. `;
+      }
+
+      finalPrompt = bgInstruction + finalPrompt;
+    }
   }
   // --- Special Handling for Face Swap ---
-  else if (generationConfig.workflow === 'face_swap') {
-      if (generationConfig.referenceImage) {
-          parts.push(base64ToPart(generationConfig.referenceImage));
+  else if (generationConfig.workflow === "face_swap") {
+    if (generationConfig.referenceImage) {
+      parts.push(base64ToPart(generationConfig.referenceImage));
 
-          let swapInstruction = `[Instruction]: This first image is the WEDDING ACCESSORIES PRODUCT/BODY REFERENCE. `;
-          swapInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+      let swapInstruction = `[Instruction]: This first image is the WEDDING ACCESSORIES PRODUCT/BODY REFERENCE. `;
+      swapInstruction += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
 
-          if (generationConfig.faceSwapConfig?.mode === 'model_swap') {
-               swapInstruction += `WEDDING ATTIRE PRESERVATION: Keep ALL wedding accessories exactly as is - veils, headpieces, gloves, sashes, jewelry. `;
-               swapInstruction += `FABRIC INTEGRITY: Maintain lace patterns, transparency levels, and decorative elements. `;
-               swapInstruction += `GENERATE A NEW MODEL (face, hair, skin tone) wearing the exact same wedding attire. `;
-          } else if (generationConfig.faceSwapConfig?.mode === 'head_swap') {
-               swapInstruction += `ACCESSORIES PRESERVATION: Keep ALL wedding accessories exactly - veils must maintain position and transparency, headpieces intact. `;
-               swapInstruction += `FIT INTEGRITY: Preserve how accessories fit and interact with hair/head. `;
-               swapInstruction += `SWAP THE HEAD AND HAIR only, ensuring seamless integration with existing accessories. `;
-          } else {
-               swapInstruction += `MINIMAL CHANGE APPROACH: Keep EVERYTHING else exactly the same - veils, hair, headpieces, earrings, necklaces. `;
-               swapInstruction += `SWAP ONLY THE CORE FACIAL FEATURES (eyes, nose, mouth) while preserving makeup and accessory interactions. `;
-          }
-
-          swapInstruction += `CRITICAL: Do NOT alter fit, positioning, or appearance of any wedding accessories. Preserve natural interactions between accessories and model. `;
-          finalPrompt = swapInstruction + finalPrompt;
+      if (generationConfig.faceSwapConfig?.mode === "model_swap") {
+        swapInstruction += `WEDDING ATTIRE PRESERVATION: Keep ALL wedding accessories exactly as is - veils, headpieces, gloves, sashes, jewelry. `;
+        swapInstruction += `FABRIC INTEGRITY: Maintain lace patterns, transparency levels, and decorative elements. `;
+        swapInstruction += `GENERATE A NEW MODEL (face, hair, skin tone) wearing the exact same wedding attire. `;
+      } else if (generationConfig.faceSwapConfig?.mode === "head_swap") {
+        swapInstruction += `ACCESSORIES PRESERVATION: Keep ALL wedding accessories exactly - veils must maintain position and transparency, headpieces intact. `;
+        swapInstruction += `FIT INTEGRITY: Preserve how accessories fit and interact with hair/head. `;
+        swapInstruction += `SWAP THE HEAD AND HAIR only, ensuring seamless integration with existing accessories. `;
+      } else {
+        swapInstruction += `MINIMAL CHANGE APPROACH: Keep EVERYTHING else exactly the same - veils, hair, headpieces, earrings, necklaces. `;
+        swapInstruction += `SWAP ONLY THE CORE FACIAL FEATURES (eyes, nose, mouth) while preserving makeup and accessory interactions. `;
       }
 
-      if (generationConfig.faceImage) {
-          parts.push(base64ToPart(generationConfig.faceImage));
-          let similarity = generationConfig.faceSwapConfig?.similarity || 80;
-          finalPrompt = `[Instruction]: This second image is the FACE REFERENCE. Target Similarity: ${similarity}%. ` + finalPrompt;
-      }
+      swapInstruction += `CRITICAL: Do NOT alter fit, positioning, or appearance of any wedding accessories. Preserve natural interactions between accessories and model. `;
+      finalPrompt = swapInstruction + finalPrompt;
+    }
+
+    if (generationConfig.faceImage) {
+      parts.push(base64ToPart(generationConfig.faceImage));
+      let similarity = generationConfig.faceSwapConfig?.similarity || 80;
+      finalPrompt =
+        `[Instruction]: This second image is the FACE REFERENCE. Target Similarity: ${similarity}%. ` +
+        finalPrompt;
+    }
   }
   // --- Standard Workflows (Creative, Fission, etc) ---
   else {
-      if (generationConfig.poseImage) {
-          parts.push(base64ToPart(generationConfig.poseImage));
-          finalPrompt = `[Instruction]: WEDDING ACCESSORIES POSE REFERENCE. Use this first image as a POSE REFERENCE (skeleton/structure). ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} The generated model must follow this exact pose while preserving all wedding accessory integrity.\n\n${finalPrompt}`;
-      }
-      if (generationConfig.referenceImage && !generationConfig.maskImage) {
-          parts.push(base64ToPart(generationConfig.referenceImage));
-          finalPrompt = `[Instruction]: WEDDING ACCESSORIES CONTENT REFERENCE. ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} Use this image as the CONTENT REFERENCE (Subject/Product). Maintain ALL wedding accessories exactly - veils, lace patterns, transparency levels, decorative elements, and product details from this image.\n\n${finalPrompt}`;
-      }
+    if (generationConfig.poseImage) {
+      parts.push(base64ToPart(generationConfig.poseImage));
+      finalPrompt = `[Instruction]: WEDDING ACCESSORIES POSE REFERENCE. Use this first image as a POSE REFERENCE (skeleton/structure). ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} The generated model must follow this exact pose while preserving all wedding accessory integrity.\n\n${finalPrompt}`;
+    }
+    // New: Handle Multiple References for Standard Workflows
+    if (
+      generationConfig.referenceImages &&
+      generationConfig.referenceImages.length > 0
+    ) {
+      generationConfig.referenceImages.forEach((img) =>
+        parts.push(base64ToPart(img))
+      );
+
+      let multiRefPrompt = `[Instruction]: WEDDING ACCESSORIES MULTI-ANGLE REFERENCE. `;
+      multiRefPrompt += `${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} `;
+      multiRefPrompt += `TASK: Analyze ALL provided reference images to understand the complete product structure, fabric details, and design from different angles. `;
+      multiRefPrompt += `MERGE these details into a consistent, high-quality generated image. `;
+      multiRefPrompt += `Ensure ALL accessory details (lace, pearls, transparency) are preserved exactly as shown across the references.\n\n`;
+
+      finalPrompt = multiRefPrompt + finalPrompt;
+    } else if (generationConfig.referenceImage && !generationConfig.maskImage) {
+      parts.push(base64ToPart(generationConfig.referenceImage));
+      finalPrompt = `[Instruction]: WEDDING ACCESSORIES CONTENT REFERENCE. ${WEDDING_ACCESSORIES_CONSISTENCY_PROMPT} Use this image as the CONTENT REFERENCE (Subject/Product). Maintain ALL wedding accessories exactly - veils, lace patterns, transparency levels, decorative elements, and product details from this image.\n\n${finalPrompt}`;
+    }
   }
 
   parts.push({ text: finalPrompt });
@@ -451,61 +503,72 @@ export const generateImage = async (generationConfig: GenerationConfig): Promise
 
   // 辅助函数：执行请求
   const executeRequest = async (model: string) => {
-      const imageConfig: any = {
-          aspectRatio: generationConfig.aspectRatio,
-      };
+    const imageConfig: any = {
+      aspectRatio: generationConfig.aspectRatio,
+    };
 
-      // 注意：gemini-2.5-flash-image 不支持 imageSize
-      if (model === 'gemini-3-pro-image-preview') {
-          imageConfig.imageSize = generationConfig.imageSize;
-      }
+    // 注意：gemini-2.5-flash-image 不支持 imageSize
+    if (model === "gemini-3-pro-image-preview") {
+      imageConfig.imageSize = generationConfig.imageSize;
+    }
 
-      return await ai.models.generateContent({
-          model: model,
-          contents: { parts },
-          config: { imageConfig }
-      });
+    return await ai.models.generateContent({
+      model: model,
+      contents: { parts },
+      config: { imageConfig },
+    });
   };
 
   try {
-      // 策略：默认使用 flash-image (1K)，如果是 2K/4K 则升级到 pro。
-      // 如果 pro 失败 (403)，则降级到 flash-image 自动重试。
-      let targetModel = 'gemini-2.5-flash-image';
+    // 策略：默认使用 flash-image (1K)，如果是 2K/4K 则升级到 pro。
+    // 如果 pro 失败 (403)，则降级到 flash-image 自动重试。
+    let targetModel = "gemini-2.5-flash-image";
 
-      if (generationConfig.imageSize === '2K' || generationConfig.imageSize === '4K') {
-          targetModel = 'gemini-3-pro-image-preview';
+    if (
+      generationConfig.imageSize === "2K" ||
+      generationConfig.imageSize === "4K"
+    ) {
+      targetModel = "gemini-3-pro-image-preview";
+    }
+
+    let response: GenerateContentResponse;
+
+    try {
+      response = await executeRequest(targetModel);
+    } catch (error: any) {
+      // 捕获 403 权限错误或 404 模型未找到错误
+      const isAuthError =
+        error.status === 403 ||
+        error.message?.includes("403") ||
+        error.message?.includes("PERMISSION_DENIED");
+      const isNotFoundError =
+        error.status === 404 || error.message?.includes("404");
+
+      if (
+        (isAuthError || isNotFoundError) &&
+        targetModel === "gemini-3-pro-image-preview"
+      ) {
+        console.warn(
+          "Gemini Pro Image Model failed (Auth/NotFound). Falling back to Flash Image."
+        );
+        // 降级重试 (注意：Flash 模型不支持 imageSize，在 executeRequest 中已处理)
+        response = await executeRequest("gemini-2.5-flash-image");
+      } else {
+        throw error; // 其他错误抛出
       }
+    }
 
-      let response: GenerateContentResponse;
-      
-      try {
-          response = await executeRequest(targetModel);
-      } catch (error: any) {
-          // 捕获 403 权限错误或 404 模型未找到错误
-          const isAuthError = error.status === 403 || error.message?.includes('403') || error.message?.includes('PERMISSION_DENIED');
-          const isNotFoundError = error.status === 404 || error.message?.includes('404');
-
-          if ((isAuthError || isNotFoundError) && targetModel === 'gemini-3-pro-image-preview') {
-              console.warn("Gemini Pro Image Model failed (Auth/NotFound). Falling back to Flash Image.");
-              // 降级重试 (注意：Flash 模型不支持 imageSize，在 executeRequest 中已处理)
-              response = await executeRequest('gemini-2.5-flash-image');
-          } else {
-              throw error; // 其他错误抛出
-          }
+    // 解析返回的图片数据
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        const base64EncodeString = part.inlineData.data;
+        return `data:image/png;base64,${base64EncodeString}`;
       }
+    }
 
-      // 解析返回的图片数据
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          const base64EncodeString = part.inlineData.data;
-          return `data:image/png;base64,${base64EncodeString}`;
-        }
-      }
-
-      throw new Error("未生成任何图片数据 (No image data returned)");
-
+    throw new Error("未生成任何图片数据 (No image data returned)");
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    throw error; 
+    throw error;
   }
 };
