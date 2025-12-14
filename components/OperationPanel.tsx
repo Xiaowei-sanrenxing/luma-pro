@@ -67,15 +67,90 @@ const AMAZON_APLUS_PLATFORMS = [
 
 const QUANTITY_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+// 详细模特特征描述系统
+const ETHNIC_FEATURES = {
+  asian: {
+    general: 'East Asian woman with distinctive features: almond-shaped eyes with epicanthic fold, straight black hair, fair to light skin, flattened nose bridge, smaller nose, thin eyebrows',
+    specific: 'single eyelid or double eyelid with epicanthic fold, petite facial structure, cheekbones not very prominent, straight dark hair, typically lighter skin tone'
+  },
+  caucasian: {
+    general: 'Caucasian/European woman with classic features: variety of eye colors (blue, green, brown, hazel), diverse hair colors (blonde, brown, red, black), prominent nose bridge, thin to medium eyebrows',
+    specific: 'deep-set eyes without epicanthic fold, high nose bridge, prominent jawline, various hair textures and colors, fair to olive skin, defined facial bones'
+  },
+  latina: {
+    general: 'Latina/Hispanic woman with mixed features: brown eyes, dark brown hair, olive to tan skin, full lips, expressive eyes, thicker eyebrows',
+    specific: 'almond-shaped eyes, dark brown expressive eyes, high cheekbones, fuller facial features, curvaceous body type, wavy to curly dark hair, golden-olive skin tone'
+  },
+  african: {
+    general: 'African woman with distinctive features: dark brown to black skin, full lips, wide nose, dark brown eyes, coily to curly hair, prominent cheekbones',
+    specific: 'deep brown eyes, wide flared nose, full lips prominent, high cheekbones, tight coils to loose curls, rich dark skin tones, strong facial bone structure'
+  },
+  middle_eastern: {
+    general: 'Middle Eastern/Arab woman with strong features: prominent aquiline nose, thick dark eyebrows, deep-set almond eyes, olive to tan skin, strong jawline',
+    specific: 'VERY prominent hooked/aquiline nose, EXTREMELY thick arched eyebrows, INTENSE deep-set dark almond eyes, DARK olive skin, DRAMATIC high cheekbones, STRONG angular jaw structure, full lips, long thick dark wavy hair'
+  }
+};
+
 // 预设模特库
 const PRESET_MODELS = [
-  { id: 'asia_1', label: '亚洲温婉', src: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&q=80', desc: 'Asian female, soft features, elegant smile' },
-  { id: 'asia_2', label: '亚洲高级', src: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&h=200&fit=crop&q=80', desc: 'Asian female, high fashion, sharp features' },
-  { id: 'eu_1', label: '欧美经典', src: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&q=80', desc: 'Caucasian female, blonde, classic beauty' },
-  { id: 'eu_2', label: '欧美酷感', src: 'https://images.unsplash.com/photo-1503104834685-7205e8607eb9?w=200&h=200&fit=crop&q=80', desc: 'Caucasian female, edgy, street style, cool attitude' },
-  { id: 'af_1', label: '非裔时尚', src: 'https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=200&h=200&fit=crop&q=80', desc: 'African female, elegant, glowing skin' },
-  { id: 'la_1', label: '拉美活力', src: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&q=80', desc: 'Latina female, energetic, curly hair' },
+  {
+    id: 'asia_1',
+    label: '亚洲温婉',
+    src: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&q=80',
+    desc: 'East Asian woman with DISTINCTIVE features: almond-shaped eyes with noticeable epicanthic fold, straight jet-black hair, fair porcelain skin, petite nose with flattened bridge, delicate facial structure, gentle expression'
+  },
+  {
+    id: 'asia_2',
+    label: '亚洲高级',
+    src: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&h=200&fit=crop&q=80',
+    desc: 'East Asian high fashion model with STRIKING features: prominent double eyelids with subtle epicanthic fold, sharp facial contours, flawless fair skin, sleek dark hair, sophisticated bone structure, elegant proportions'
+  },
+  {
+    id: 'eu_1',
+    label: '欧美经典',
+    src: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&q=80',
+    desc: 'Classic European beauty with PROMINENT features: piercing blue eyes, high arched nose bridge, defined cheekbones, flowing blonde hair, fair skin with rosy tones, sharp jawline, sophisticated facial structure'
+  },
+  {
+    id: 'eu_2',
+    label: '欧美酷感',
+    src: 'https://images.unsplash.com/photo-1503104834685-7205e8607eb9?w=200&h=200&fit=crop&q=80',
+    desc: 'Edgy European model with BOLD features: intense hazel eyes, strong nose bridge, high prominent cheekbones, dark wavy hair, olive skin tone, angular jaw structure, confident and striking appearance'
+  },
+  {
+    id: 'af_1',
+    label: '非裔时尚',
+    src: 'https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=200&h=200&fit=crop&q=80',
+    desc: 'Elegant African model with STRIKING features: rich dark brown skin, full prominent lips, wide distinctive nose, high cheekbones, dark expressive eyes, beautiful tight coils to afro curls, regal bone structure'
+  },
+  {
+    id: 'la_1',
+    label: '拉美活力',
+    src: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&q=80',
+    desc: 'Vibrant Latina model with DISTINCTIVE features: golden-olive skin tone, expressive dark brown eyes, full lips, high cheekbones, thick wavy dark hair, curvaceous figure, warm and energetic appearance'
+  },
+  {
+    id: 'me_1',
+    label: '中东经典',
+    src: 'https://images.unsplash.com/photo-1544718892-65d97ba8c73b?w=200&h=200&fit=crop&q=80',
+    desc: 'AUTHENTIC Middle Eastern Arab woman with EXTREMELY PROMINENT features: VERY distinctive aquiline (hooked) nose, EXTRAORDINARILY thick arched eyebrows, INTENSE deep-set almond eyes, DARK olive complexion, DRAMATIC cheekbones, POWERFUL angular jaw, FULL lips, LONG thick wavy black hair - UNMISTAKABLY Middle Eastern'
+  },
+  {
+    id: 'me_2',
+    label: '中东时尚',
+    src: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&q=80',
+    desc: 'HIGH-FASHION Middle Eastern model with BOLD ethnic characteristics: STRIKING prominent hooked nose, VERY thick sculpted eyebrows, DRAMATIC deep almond-shaped eyes, RICH bronze skin, HIGH sharp cheekbones, STRONG defined jawline, SENSATIONAL full lips, voluminous lustrous dark hair - DISTINCTIVELY Arab features'
+  },
 ];
+
+// 种族特征负面提示词系统
+const ETHNIC_NEGATIVE_PROMPTS = {
+  asian: 'epicanthic fold absence, deep-set eyes, high nose bridge, prominent nose, thick eyebrows, double eyelid without epicanthic fold, western facial features, large eyes, strong jawline, prominent cheekbones',
+  caucasian: 'epicanthic fold, flattened nose bridge, small nose, single eyelid, monolid, porcelain skin tone typical of East Asians, straight black hair typical of East Asians, petite facial structure',
+  latina: 'narrow lips, thin eyebrows, pale skin, straight hair typically East Asian, very small nose, petite Asian facial structure, monolid eyes',
+  african: 'narrow nose, thin lips, straight hair, fair skin, petite facial structure, non-coily hair texture, light brown skin, small cheekbones',
+  middle_eastern: 'small nose, thin eyebrows, light skin, blonde hair, blue eyes, european facial structure, asian facial structure, petite features, western beauty standards'
+};
 
 // 固定模特（模拟品牌资产）
 const FIXED_MODELS = [
@@ -270,6 +345,7 @@ const MODEL_STYLES = [
   { id: 'caucasian', label: '欧美面孔 (Caucasian)' },
   { id: 'latina', label: '拉美面孔 (Latina)' },
   { id: 'african', label: '非裔面孔 (African)' },
+  { id: 'middle_eastern', label: '中东面孔 (Middle Eastern/Arab)' },
 ];
 
 const EXPRESSIONS = [
@@ -815,10 +891,24 @@ export const OperationPanel: React.FC = () => {
                         
                         batchPrompt += `[CONSTRAINT]: Maintain the product clothing details exactly. Change the model and background. `;
                         if (prompt) batchPrompt += `[DETAILS]: ${prompt}`;
-  
+
+                        // Add ethnic-specific negative prompts to preserve distinct features
+                        let batchNegative = negativePrompt + ", bad anatomy, deformed";
+                        if (targetModel?.id?.startsWith('asia_')) {
+                            batchNegative += `, ${ETHNIC_NEGATIVE_PROMPTS.asian}`;
+                        } else if (targetModel?.id?.startsWith('eu_')) {
+                            batchNegative += `, ${ETHNIC_NEGATIVE_PROMPTS.caucasian}`;
+                        } else if (targetModel?.id?.startsWith('la_')) {
+                            batchNegative += `, ${ETHNIC_NEGATIVE_PROMPTS.latina}`;
+                        } else if (targetModel?.id?.startsWith('af_')) {
+                            batchNegative += `, ${ETHNIC_NEGATIVE_PROMPTS.african}`;
+                        } else if (targetModel?.id?.startsWith('me_')) {
+                            batchNegative += `, ${ETHNIC_NEGATIVE_PROMPTS.middle_eastern}`;
+                        }
+
                         const url = await generateImage({
                             prompt: batchPrompt,
-                            negativePrompt: negativePrompt + ", bad anatomy, deformed",
+                            negativePrompt: batchNegative,
                             aspectRatio,
                             imageSize,
                             referenceImage: task.img,
@@ -845,13 +935,26 @@ export const OperationPanel: React.FC = () => {
         // --- 1. Fission Workflow ---
         if (activeWorkflow === 'fission' && selectedPoses.length > 0) {
              // Enforce anti-collage negative prompt for Fission
-             const fissionNegative = `${negativePrompt}, grid, collage, split screen, multiple views, multiple panels, storyboard, comic strip, borders, frames`;
+             let fissionNegative = `${negativePrompt}, grid, collage, split screen, multiple views, multiple panels, storyboard, comic strip, borders, frames`;
+             // Add ethnic-specific negative prompts to preserve distinct features
+             if (modelStyle && modelStyle !== 'original' && ETHNIC_NEGATIVE_PROMPTS[modelStyle]) {
+                 fissionNegative += `, ${ETHNIC_NEGATIVE_PROMPTS[modelStyle]}`;
+             }
 
              if (selectedPoses.includes('custom_upload')) {
                // Single Custom Pose
                if (!customPoseImage) { alert("请上传骨架图"); setIsGenerating(false); return; }
-               const stylePrompt = modelStyle !== 'original' ? `model ethnicity: ${modelStyle}` : 'keep model identity identical';
+               const stylePrompt = modelStyle !== 'original' && ETHNIC_FEATURES[modelStyle] ?
+    `AUTHENTIC model with ${ETHNIC_FEATURES[modelStyle].general}. These features MUST be PRONOUNCED and UNMISTAKABLE: ${ETHNIC_FEATURES[modelStyle].specific}` :
+    modelStyle !== 'original' ? `model ethnicity: ${modelStyle}` :
+    'keep model identity identical';
                
+               // Build enhanced negative prompt for ethnic consistency
+               let customNegative = fissionNegative;
+               if (modelStyle && modelStyle !== 'original' && ETHNIC_NEGATIVE_PROMPTS[modelStyle]) {
+                   customNegative += `, ${ETHNIC_NEGATIVE_PROMPTS[modelStyle]}`;
+               }
+
                // OPTIMIZED PROMPT: Anti-collage
                const fullPrompt = `
                [TASK]: Generate a SINGLE high-quality fashion photograph based on the skeleton pose.
@@ -863,7 +966,7 @@ export const OperationPanel: React.FC = () => {
                 
                try {
                    const imageUrl = await generateImage({
-                      prompt: fullPrompt, negativePrompt: fissionNegative, aspectRatio, imageSize, referenceImage: uploadedImage || undefined, poseImage: customPoseImage, workflow: activeWorkflow
+                      prompt: fullPrompt, negativePrompt: customNegative, aspectRatio, imageSize, referenceImage: uploadedImage || undefined, poseImage: customPoseImage, workflow: activeWorkflow
                    });
                    await addGeneratedLayer(imageUrl, "Custom Pose", 0);
                } catch (e) { handleError(e); }
@@ -881,7 +984,9 @@ export const OperationPanel: React.FC = () => {
                     const fullPrompt = `
                     [TASK]: Generate a SINGLE professional fashion portrait.
                     [LAYOUT]: Single full frame image. Strictly NO collage, NO grid, NO split screen, NO multiple angles.
-                    [MODEL]: ${modelStyle === 'original' ? 'Keep original model consistency' : `Model ethnicity: ${modelStyle}`}.
+                    [MODEL]: ${modelStyle === 'original' ? 'Keep original model consistency' :
+        modelStyle && ETHNIC_FEATURES[modelStyle] ? `AUTHENTIC ${ETHNIC_FEATURES[modelStyle].general}. SPECIFIC DETAILS: ${ETHNIC_FEATURES[modelStyle].specific}. These ethnic features MUST be PROMINENT and CLEARLY VISIBLE` :
+        `Model ethnicity: ${modelStyle}`}.
                     [POSE]: ${poseData?.prompt}.
                     [DETAILS]: ${prompt}
                     `.trim();
